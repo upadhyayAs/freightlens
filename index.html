@@ -1,0 +1,2727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargo Risk Assessment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  try{
+    if(localStorage.getItem("cargoRiskEngine_theme") === "dark"){
+      document.documentElement.setAttribute("data-theme","dark");
+    }
+  }catch(e){}
+</script>
+<style>
+  :root{
+    --bg:#f6f7fb;
+    --bg-2:#eceef4;
+    --panel:#ffffff;
+    --panel-2:#f2f3f8;
+    --border:#dde1ea;
+    --border-soft:#e8eaf1;
+    --text:#1b2130;
+    --muted:#647085;
+    --muted-2:#93a0b3;
+    --accent:#0e9488;
+    --accent-soft:rgba(14,148,136,0.10);
+    --accent-2:#4f6bf0;
+    --warn:#b9760f;
+    --err:#d1445c;
+    --ok:#0e9488;
+    --mode-rail:#7c4fe0;
+    --radius:14px;
+    --radius-sm:9px;
+    --display: "Space Grotesk", "Inter", sans-serif;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+
+    --topbar-bg:rgba(246,247,251,0.82);
+    --error-text:#a52f45;
+    --status-warn-text:#8a5a09;
+    --status-err-text:#a52f45;
+    --blob-1:rgba(124,156,255,0.10);
+    --blob-2:rgba(73,216,200,0.09);
+  }
+  [data-theme="dark"]{
+    --bg:#0a0e15;
+    --bg-2:#0d1420;
+    --panel:#111826;
+    --panel-2:#161f30;
+    --border:#232e42;
+    --border-soft:#1a2434;
+    --text:#e8edf6;
+    --muted:#7c8aa3;
+    --muted-2:#586277;
+    --accent:#49d8c8;
+    --accent-soft:rgba(73,216,200,0.12);
+    --accent-2:#7c9cff;
+    --warn:#f2b84b;
+    --err:#f2687a;
+    --ok:#49d8c8;
+    --mode-rail:#b98cff;
+
+    --topbar-bg:rgba(10,14,21,0.7);
+    --error-text:#ffb3bd;
+    --status-warn-text:#f7b74a;
+    --status-err-text:#f2687a;
+    --blob-1:rgba(124,156,255,0.14);
+    --blob-2:rgba(73,216,200,0.12);
+  }
+  *{box-sizing:border-box;}
+  html{transition:background-color .9s ease;}
+  body, .card, .topbar, input, select, .visual-rail-static-note,
+  .ac-list, #resultBody, .sf-link, .live-pill, .theme-toggle,
+  .step .circle, .error-box, .approval-status, .approval-panel,
+  .vr-eta, .status-dot{
+    transition:background-color .9s ease, color .7s ease, border-color .7s ease;
+  }
+  ::selection{background:var(--accent-soft);color:var(--text);}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--text);
+    min-height:100vh;
+    background:var(--bg);
+    position:relative;
+    padding:0 0 90px;
+    transition:background-color .4s ease, color .3s ease;
+  }
+  body::before{
+    content:"";
+    position:fixed;inset:-15%;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(900px 480px at 30% 25%, var(--blob-1) 0%, transparent 60%),
+      radial-gradient(700px 420px at 70% 75%, var(--blob-2) 0%, transparent 55%);
+    background-size:160% 160%;
+    animation:ambientDrift 75s ease-in-out infinite;
+    transition:background .4s ease;
+  }
+  @keyframes ambientDrift{
+    0%   { background-position: 0% 0%, 0% 0%; }
+    50%  { background-position: 30% 20%, -20% -15%; }
+    100% { background-position: 0% 0%, 0% 0%; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    body::before{animation:none;}
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    border-bottom:1px solid var(--border-soft);
+    background:var(--topbar-bg);
+    backdrop-filter:blur(10px);
+    position:sticky;top:0;z-index:30;
+  }
+  .topbar-inner{
+    max-width:880px;margin:0 auto;padding:16px 20px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{
+    width:30px;height:30px;border-radius:8px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.06) inset, 0 6px 18px -6px rgba(73,216,200,0.5);
+  }
+  .brand-mark svg{width:16px;height:16px;}
+  .brand-name{font-family:var(--display);font-weight:600;font-size:0.95rem;letter-spacing:-0.01em;}
+  .brand-sub{font-size:0.68rem;color:var(--muted);font-family:var(--mono);letter-spacing:0.04em;text-transform:uppercase;}
+  .topbar-right{display:flex;align-items:center;gap:10px;}
+
+  .lang-select{position:relative;}
+  .lang-toggle{
+    display:flex;align-items:center;gap:6px;
+    height:32px;padding:0 10px;border-radius:9px;
+    border:1px solid var(--border);background:var(--panel-2);color:var(--muted);
+    font-family:var(--mono);font-size:0.72rem;font-weight:600;letter-spacing:0.03em;
+    cursor:pointer;transition:border-color .15s, color .15s;
+  }
+  .lang-toggle:hover{border-color:var(--accent);color:var(--accent);}
+  .lang-toggle svg{width:14px;height:14px;flex-shrink:0;}
+  .lang-caret{width:9px !important;height:9px !important;}
+  .lang-menu{
+    position:absolute;top:calc(100% + 6px);right:0;z-index:40;
+    width:230px;max-height:320px;overflow-y:auto;
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-sm);
+    box-shadow:0 16px 34px -10px rgba(0,0,0,0.35);
+    padding:5px;
+  }
+  .lang-option{
+    display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+    padding:8px 10px;border-radius:7px;cursor:pointer;font-size:0.85rem;color:var(--text);
+  }
+  .lang-option:hover{background:var(--accent-soft);}
+  .lang-option.active{background:var(--accent-soft);color:var(--accent);font-weight:600;}
+  .lang-option .lo-code{font-family:var(--mono);font-size:0.68rem;color:var(--muted-2);text-transform:uppercase;}
+  .theme-toggle{
+    display:flex;align-items:center;justify-content:center;
+    width:32px;height:32px;border-radius:9px;
+    border:1px solid var(--border);background:var(--panel-2);color:var(--muted);
+    padding:0;cursor:pointer;transition:border-color .15s, color .15s;
+  }
+  .theme-toggle:hover{border-color:var(--accent);color:var(--accent);}
+  .theme-toggle svg{width:16px;height:16px;}
+  .theme-toggle .ti-moon{display:none;}
+  [data-theme="dark"] .theme-toggle .ti-sun{display:none;}
+  [data-theme="dark"] .theme-toggle .ti-moon{display:block;}
+
+  .live-pill{
+    display:flex;align-items:center;gap:6px;
+    font-family:var(--mono);font-size:0.7rem;font-weight:500;color:var(--accent);
+    border:1px solid rgba(73,216,200,0.35);border-radius:20px;padding:5px 12px;
+    background:var(--accent-soft);
+    box-shadow:0 0 0 1px rgba(73,216,200,0.08) inset;
+  }
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:blink 2s ease-in-out infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.35;}}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px;}
+
+  .layout-grid{
+    display:grid;
+    grid-template-columns:minmax(0,680px) minmax(300px,380px);
+    gap:36px;
+    align-items:start;
+  }
+  .main-col{min-width:0;}
+
+  /* ---------- cinematic risk-story rail ---------- */
+  .visual-rail{
+    position:sticky;top:88px;
+    height:calc(100vh - 120px);
+    max-height:640px;
+    min-height:420px;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    overflow:hidden;
+    background:
+      radial-gradient(420px 320px at 50% 18%, rgba(124,156,255,0.14) 0%, transparent 65%),
+      radial-gradient(360px 280px at 15% 85%, rgba(73,216,200,0.12) 0%, transparent 65%),
+      linear-gradient(180deg, #0b1019 0%, #080c13 100%);
+    display:flex;flex-direction:column;
+  }
+  .vr-dotgrid{
+    position:absolute;inset:0;
+    background-image:radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size:22px 22px;
+    animation:dotdrift 60s linear infinite;
+    -webkit-mask-image:radial-gradient(circle at 50% 40%, black 0%, transparent 78%);
+    mask-image:radial-gradient(circle at 50% 40%, black 0%, transparent 78%);
+  }
+  @keyframes dotdrift{ from{background-position:0 0;} to{background-position:220px 220px;} }
+
+  .vr-scanline{
+    position:absolute;left:0;right:0;height:120px;
+    background:linear-gradient(180deg, transparent, rgba(73,216,200,0.06), transparent);
+    animation:scan 7s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes scan{
+    0%{top:-10%;} 50%{top:95%;} 100%{top:-10%;}
+  }
+
+  .vr-head{
+    position:relative;z-index:2;padding:22px 22px 0;
+  }
+  .vr-eyebrow{
+    font-family:var(--mono);font-size:0.66rem;color:var(--accent);
+    letter-spacing:0.09em;text-transform:uppercase;display:flex;align-items:center;gap:7px;
+  }
+  .vr-eyebrow .rec-dot{width:6px;height:6px;border-radius:50%;background:var(--err);box-shadow:0 0 8px var(--err);animation:blink 1.6s ease-in-out infinite;}
+  .vr-title{
+    font-family:var(--display);font-weight:600;font-size:1.05rem;
+    margin:8px 0 0;line-height:1.35;color:var(--text);max-width:280px;
+  }
+
+  .vr-map{
+    position:relative;flex:1;min-height:0;z-index:2;
+  }
+  .vr-map svg{width:100%;height:100%;display:block;}
+  .vr-node{opacity:0.85;}
+  .vr-mover{filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));}
+  .vr-risk-dot{transform-origin:center;animation:riskpulse 2.6s ease-in-out infinite;}
+  .vr-risk-ring{transform-origin:center;animation:riskring 2.6s ease-out infinite;}
+  @keyframes riskpulse{0%,100%{opacity:0.55;}50%{opacity:1;}}
+  @keyframes riskring{
+    0%{r:3;opacity:0.6;}
+    100%{r:16;opacity:0;}
+  }
+  .vr-blast{transform-origin:center;fill:none;animation:blastPulse 9s ease-out infinite;}
+  @keyframes blastPulse{
+    0%, 88%{r:2;opacity:0;stroke-width:2.4;}
+    90%{r:3;opacity:0.9;stroke-width:2.2;}
+    100%{r:46;opacity:0;stroke-width:0.3;}
+  }
+  .vr-blast-flash{transform-origin:center;animation:blastFlash 9s ease-out infinite;}
+  @keyframes blastFlash{
+    0%, 88%{opacity:0;}
+    90%{opacity:1;}
+    94%{opacity:0;}
+    100%{opacity:0;}
+  }
+
+  .vr-legend{
+    position:relative;z-index:2;
+    display:flex;gap:16px;padding:0 22px 14px;
+    font-family:var(--mono);font-size:0.66rem;color:var(--muted);
+    text-transform:uppercase;letter-spacing:0.05em;
+  }
+  .vr-legend span{display:flex;align-items:center;gap:6px;}
+  .vr-legend i{width:7px;height:7px;border-radius:50%;display:inline-block;}
+
+  .vr-eta{
+    position:relative;z-index:2;
+    margin:0 22px 16px;padding:12px 14px;
+    border:1px solid var(--border-soft);border-radius:var(--radius-sm);
+    background:rgba(73,216,200,0.05);
+    display:flex;align-items:center;gap:12px;
+  }
+  .vr-eta-icon{
+    flex-shrink:0;width:30px;height:30px;border-radius:8px;
+    background:var(--panel-2);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;color:var(--accent);
+  }
+  .vr-eta-icon svg{width:15px;height:15px;}
+  .vr-eta-body{min-width:0;flex:1;}
+  .vr-eta-label{font-family:var(--mono);font-size:0.6rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;}
+  .vr-eta-stack{position:relative;height:19px;}
+  .vr-eta-item{
+    position:absolute;inset:0;
+    font-family:var(--mono);font-size:0.85rem;color:var(--text);font-weight:500;
+    animation:storyCycle 18s infinite;
+    animation-delay: calc(var(--i) * -6s);
+  }
+
+  .vr-story{
+    position:relative;z-index:2;
+    padding:16px 22px 22px;
+    border-top:1px solid var(--border-soft);
+    background:rgba(8,12,19,0.55);
+  }
+  .vr-caption-stack{position:relative;height:56px;}
+  .vr-caption{
+    position:absolute;inset:0;
+    display:flex;align-items:flex-start;gap:11px;
+    animation:storyCycle 25s infinite;
+    animation-delay: calc(var(--i) * -5s);
+  }
+  .vr-caption .vc-icon{
+    flex-shrink:0;width:26px;height:26px;border-radius:7px;
+    background:var(--panel-2);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;color:var(--accent);
+    margin-top:1px;
+  }
+  .vr-caption .vc-icon svg{width:14px;height:14px;}
+  .vr-caption p{
+    margin:0;font-size:0.84rem;line-height:1.45;color:var(--text);
+  }
+  @keyframes storyCycle{
+    0%, 2%{opacity:0;transform:translateY(8px);}
+    6%, 15%{opacity:1;transform:translateY(0);}
+    20%, 100%{opacity:0;transform:translateY(-6px);}
+  }
+
+  .vr-footline{
+    display:flex;align-items:center;gap:8px;margin-top:14px;
+    font-family:var(--mono);font-size:0.66rem;color:var(--muted-2);
+    text-transform:uppercase;letter-spacing:0.06em;
+  }
+  .vr-footline .bar{flex:1;height:1px;background:var(--border-soft);}
+
+  @media (max-width:980px){
+    .layout-grid{grid-template-columns:1fr;}
+    .visual-rail{
+      position:relative;top:0;height:280px;min-height:280px;max-height:none;
+      order:-1;
+    }
+    .vr-title{max-width:none;}
+  }
+  header.hero{padding:52px 0 34px;}
+  header.hero .eyebrow{
+    font-family:var(--mono);font-size:0.72rem;color:var(--accent);
+    letter-spacing:0.08em;text-transform:uppercase;margin-bottom:14px;
+    display:flex;align-items:center;gap:8px;
+  }
+  header.hero .eyebrow::before{content:"";width:16px;height:1px;background:var(--accent);display:inline-block;}
+  header.hero h1{
+    font-family:var(--display);font-weight:600;font-size:2.15rem;
+    line-height:1.15;letter-spacing:-0.02em;margin:0 0 12px;
+    max-width:560px;
+  }
+  header.hero p{color:var(--muted);margin:0;font-size:0.98rem;max-width:520px;line-height:1.6;}
+
+  /* ---------- cards ---------- */
+  .card{
+    background:linear-gradient(180deg, var(--panel) 0%, var(--panel) 100%);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:26px 26px 28px;
+    margin-bottom:18px;
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg, transparent, rgba(73,216,200,0.4), transparent);
+  }
+  .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .card-head h2{
+    font-family:var(--display);font-weight:600;font-size:1rem;margin:0;
+    display:flex;align-items:center;gap:9px;letter-spacing:-0.01em;
+  }
+  .card-head h2 .step-no{
+    font-family:var(--mono);font-size:0.72rem;color:var(--bg);
+    background:var(--accent);width:20px;height:20px;border-radius:6px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .badge{
+    font-size:0.68rem;font-weight:500;color:var(--muted);
+    border:1px solid var(--border);border-radius:20px;padding:3px 10px;
+    font-family:var(--mono);
+  }
+
+  /* ---------- route signature ---------- */
+  .route-strip{
+    display:flex;align-items:center;gap:14px;
+    background:var(--panel-2);border:1px solid var(--border-soft);
+    border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:22px;
+  }
+  .route-point{flex:1;min-width:0;}
+  .route-point .rp-label{font-family:var(--mono);font-size:0.62rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px;}
+  .route-point .rp-city{font-family:var(--display);font-weight:600;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .route-point .rp-city.placeholder{color:var(--muted-2);font-weight:500;}
+  .route-point .rp-country{font-size:0.74rem;color:var(--muted);margin-top:2px;}
+  .route-point.dest{text-align:right;}
+  .route-mid{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:5px;width:64px;}
+  .route-line{position:relative;width:100%;height:1px;background:repeating-linear-gradient(90deg, var(--border) 0 5px, transparent 5px 9px);}
+  .route-mid .mode-icon{
+    width:30px;height:30px;border-radius:50%;background:var(--bg-2);
+    border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+    color:var(--accent);flex-shrink:0;
+  }
+  .route-mid .mode-icon svg{width:15px;height:15px;}
+  .route-mid .mode-label{font-family:var(--mono);font-size:0.6rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:0.05em;}
+
+  /* ---------- form elements ---------- */
+  label{display:block;font-size:0.78rem;color:var(--muted);margin:16px 0 7px;font-weight:500;}
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=number], input[type=date], select{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:var(--radius-sm);
+    padding:11px 13px;
+    font-size:0.9rem;
+    font-family:var(--sans);
+    outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input::placeholder{color:var(--muted-2);}
+  input:focus, select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  input[readonly]{color:var(--accent);background:var(--bg-2);cursor:default;font-family:var(--mono);font-size:0.85rem;}
+  select{appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M0 0l5 6 5-6z" fill="%23647085"/></svg>');background-repeat:no-repeat;background-position:right 13px center;padding-right:32px;}
+
+  .row{display:flex;gap:14px;}
+  .row > div{flex:1;min-width:0;}
+
+  button{
+    font-family:var(--sans);font-size:0.9rem;font-weight:600;
+    border-radius:var(--radius-sm);border:1px solid transparent;
+    padding:12px 22px;cursor:pointer;transition:opacity .15s, transform .05s, box-shadow .15s;
+  }
+  button:active{transform:scale(0.98);}
+  button:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-primary{
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    color:#08121a;box-shadow:0 8px 22px -10px rgba(73,216,200,0.55);
+  }
+  .btn-primary:hover:not(:disabled){box-shadow:0 10px 26px -8px rgba(73,216,200,0.7);}
+  .btn-ghost{background:transparent;border-color:var(--border);color:var(--muted);}
+  .btn-ghost:hover{color:var(--text);border-color:var(--muted-2);}
+
+  /* ---------- status / stepper ---------- */
+  .stepper{display:flex;align-items:center;gap:0;margin-bottom:20px;}
+  .step{display:flex;align-items:center;gap:8px;flex:1;}
+  .step .circle{
+    width:22px;height:22px;border-radius:50%;flex-shrink:0;
+    border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:0.65rem;color:var(--muted-2);
+    transition:all .25s;
+  }
+  .step .label{font-size:0.76rem;color:var(--muted-2);font-weight:500;transition:color .25s;}
+  .step .connector{flex:1;height:1px;background:var(--border);margin:0 6px;transition:background .25s;}
+  .step.done .circle{background:var(--accent);border-color:var(--accent);color:#08121a;}
+  .step.done .label{color:var(--text);}
+  .step.active .circle{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .step.active .label{color:var(--text);}
+  .step.error .circle{background:var(--err);border-color:var(--err);color:#1a0808;}
+  .step.error .label{color:var(--err);}
+
+  #resultBody{
+    font-family:var(--mono);
+    font-size:0.85rem;line-height:1.65;white-space:pre-wrap;
+    color:var(--text);
+    background:var(--bg-2);border:1px solid var(--border-soft);
+    border-radius:var(--radius-sm);padding:16px;
+  }
+  #resultBody:empty{display:none;}
+
+  .meta{font-size:0.72rem;color:var(--muted-2);margin-top:10px;font-family:var(--mono);}
+
+  .foot{text-align:center;color:var(--muted-2);font-size:0.76rem;margin-top:40px;font-family:var(--mono);}
+  .foot code{background:var(--panel-2);padding:2px 7px;border-radius:5px;border:1px solid var(--border-soft);}
+
+  .site-footer{
+    margin-top:40px;padding-top:30px;border-top:1px solid var(--border-soft);
+  }
+  .sf-pitch{max-width:640px;margin-bottom:22px;}
+  .sf-pitch-title{
+    font-family:var(--display);font-weight:600;font-size:1.15rem;
+    letter-spacing:-0.01em;margin-bottom:8px;color:var(--text);
+  }
+  .sf-pitch p{margin:0;color:var(--muted);font-size:0.88rem;line-height:1.65;}
+
+  .sf-contact{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:18px;}
+  .sf-link{
+    display:flex;align-items:center;gap:9px;
+    padding:9px 15px;border:1px solid var(--border);border-radius:20px;
+    color:var(--text);text-decoration:none;font-size:0.83rem;font-weight:500;
+    background:var(--panel-2);transition:border-color .15s, color .15s;
+  }
+  .sf-link svg{width:16px;height:16px;color:var(--accent);flex-shrink:0;}
+  .sf-link:hover{border-color:var(--accent);color:var(--accent);}
+
+  .sf-meta{font-family:var(--mono);font-size:0.72rem;color:var(--muted-2);}
+  .sf-meta code{background:var(--panel-2);padding:2px 7px;border-radius:5px;border:1px solid var(--border-soft);}
+  .sf-copyright{font-family:var(--mono);font-size:0.7rem;color:var(--muted-2);margin-top:8px;}
+
+  .hidden{display:none !important;}
+  .error-box{
+    display:flex;gap:9px;align-items:flex-start;
+    border:1px solid rgba(209,68,92,0.3);background:rgba(209,68,92,0.07);
+    color:var(--error-text);border-radius:var(--radius-sm);padding:12px 14px;font-size:0.83rem;margin-top:14px;
+    line-height:1.5;
+  }
+
+  /* ---------- autocomplete ---------- */
+  .autocomplete{position:relative;}
+  .ac-list{
+    position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:20;
+    background:var(--panel-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+    max-height:230px;overflow-y:auto;box-shadow:0 16px 34px -10px rgba(0,0,0,0.6);
+  }
+  .ac-item{padding:10px 13px;font-size:0.86rem;cursor:pointer;display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border-soft);}
+  .ac-item:last-child{border-bottom:none;}
+  .ac-item:hover, .ac-item.active{background:var(--accent-soft);}
+  .ac-item .c{color:var(--muted);font-size:0.76rem;font-family:var(--mono);}
+  .ac-empty{padding:10px 13px;font-size:0.82rem;color:var(--muted);}
+
+  .value-wrap{position:relative;}
+  .value-wrap .cur{
+    position:absolute;left:1px;top:1px;bottom:1px;
+    display:flex;align-items:center;
+    padding:0 12px;margin-right:2px;
+    color:var(--muted);font-size:0.76rem;font-weight:600;letter-spacing:0.04em;
+    font-family:var(--mono);pointer-events:none;
+    background:var(--bg-2);border-right:1px solid var(--border);
+    border-radius:var(--radius-sm) 0 0 var(--radius-sm);
+  }
+  .value-wrap input{padding-left:56px;}
+
+  @media (max-width:560px){
+    .row{flex-direction:column;}
+    header.hero h1{font-size:1.7rem;}
+    .route-strip{flex-direction:column;align-items:stretch;}
+    .route-mid{width:100%;flex-direction:row;justify-content:center;}
+    .route-line{width:40px;}
+    .route-point.dest{text-align:left;}
+  }
+  /* ============================================================
+   SHIPMENT ASSESSMENT RESULT
+   ============================================================ */
+
+.empty-result{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:20px 0 4px;
+  color:var(--muted);
+}
+
+.empty-icon{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--accent-soft);
+  color:var(--accent);
+  font-size:1.1rem;
+}
+
+.empty-result strong{
+  display:block;
+  color:var(--text);
+  font-size:0.9rem;
+  margin-bottom:3px;
+}
+
+.empty-result p{
+  margin:0;
+  font-size:0.8rem;
+}
+
+.assessment-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--border-soft);
+}
+
+.assessment-label{
+  font-family:var(--mono);
+  font-size:0.62rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--muted-2);
+  margin-bottom:5px;
+}
+
+.shipment-id{
+  font-family:var(--mono);
+  font-size:1rem;
+  color:var(--accent);
+  font-weight:600;
+}
+
+.approval-status{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 11px;
+  border-radius:20px;
+  border:1px solid rgba(247,183,74,0.3);
+  background:rgba(247,183,74,0.08);
+  color:var(--status-warn-text);
+  font-family:var(--mono);
+  font-size:0.68rem;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+}
+
+.status-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--warn);
+  box-shadow:0 0 8px rgba(247,183,74,0.6);
+}
+
+.assessment-route{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr;
+  gap:16px;
+  padding:20px 0;
+  border-bottom:1px solid var(--border-soft);
+}
+
+.assessment-route strong{
+  display:block;
+  font-size:0.86rem;
+  color:var(--text);
+  font-weight:500;
+}
+
+.risk-summary{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  padding:24px 0;
+}
+
+.risk-score-block{
+  min-width:170px;
+}
+
+.risk-score{
+  font-family:var(--display);
+  font-size:2.6rem;
+  font-weight:600;
+  line-height:1;
+  color:var(--text);
+}
+
+.risk-max{
+  font-family:var(--mono);
+  font-size:0.9rem;
+  color:var(--muted);
+  margin-left:3px;
+}
+
+.risk-level{
+  display:inline-block;
+  margin-top:9px;
+  padding:4px 9px;
+  border-radius:12px;
+  background:var(--accent-soft);
+  color:var(--accent);
+  font-family:var(--mono);
+  font-size:0.67rem;
+  letter-spacing:0.05em;
+  text-transform:uppercase;
+}
+
+.risk-message{
+  flex:1;
+  max-width:430px;
+  color:var(--muted);
+  font-size:0.84rem;
+  line-height:1.55;
+}
+
+.risk-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin-bottom:22px;
+}
+
+.risk-card{
+  padding:16px;
+  background:var(--panel-2);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm);
+}
+
+.risk-card-title{
+  font-size:0.72rem;
+  color:var(--muted);
+  margin-bottom:9px;
+}
+
+.risk-card-value{
+  font-family:var(--display);
+  font-size:1.35rem;
+  font-weight:600;
+  color:var(--text);
+}
+
+.risk-card-level{
+  font-family:var(--mono);
+  font-size:0.62rem;
+  color:var(--accent);
+  text-transform:uppercase;
+  margin-top:3px;
+}
+
+.timeline-block{
+  padding:20px 0;
+  border-top:1px solid var(--border-soft);
+  border-bottom:1px solid var(--border-soft);
+}
+
+.timeline-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-top:13px;
+}
+
+.timeline-item{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+
+.timeline-item span{
+  font-size:0.7rem;
+  color:var(--muted);
+}
+
+.timeline-item strong{
+  font-family:var(--mono);
+  font-size:0.78rem;
+  color:var(--text);
+}
+
+.approval-panel{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-top:20px;
+  padding:16px;
+  border-radius:var(--radius-sm);
+  border:1px solid rgba(247,183,74,0.25);
+  background:rgba(247,183,74,0.06);
+}
+
+.approval-icon{
+  width:38px;
+  height:38px;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:rgba(247,183,74,0.1);
+  font-size:1.1rem;
+}
+
+.approval-panel strong{
+  display:block;
+  font-family:var(--mono);
+  font-size:0.7rem;
+  letter-spacing:0.05em;
+  color:var(--status-warn-text);
+}
+
+.approval-panel p{
+  margin:5px 0 0;
+  color:var(--muted);
+  font-size:0.78rem;
+  line-height:1.45;
+}
+
+.meta{
+  margin-top:12px;
+  color:var(--muted-2);
+  font-family:var(--mono);
+  font-size:0.62rem;
+}
+
+.approval-panel.approved{
+  border-color:rgba(73,216,200,0.3);
+  background:rgba(73,216,200,0.07);
+}
+
+.approval-panel.approved .approval-icon{
+  background:rgba(73,216,200,0.12);
+}
+
+.approval-panel.approved strong{
+  color:var(--accent);
+}
+
+.approval-panel.rejected{
+  border-color:rgba(242,104,122,0.3);
+  background:rgba(242,104,122,0.07);
+}
+
+.approval-panel.rejected .approval-icon{
+  background:rgba(242,104,122,0.12);
+}
+
+.approval-panel.rejected strong{
+  color:var(--status-err-text);
+}
+
+.approval-status.approved{
+  border-color:rgba(73,216,200,0.3);
+  background:rgba(73,216,200,0.08);
+  color:var(--accent);
+}
+
+.approval-status.rejected{
+  border-color:rgba(242,104,122,0.3);
+  background:rgba(242,104,122,0.08);
+  color:var(--status-err-text);
+}
+
+@media(max-width:680px){
+  .assessment-header{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .assessment-route{
+    grid-template-columns:1fr;
+  }
+
+  .risk-summary{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .risk-grid{
+    grid-template-columns:1fr;
+  }
+
+  .timeline-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 17l5-9 4 6 3-4 6 7" stroke="#08121a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">Cargo Risk Engine</div>
+        <div class="brand-sub">Automated shipment assessment</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="lang-select">
+        <button class="lang-toggle" id="langToggle" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span id="langToggleLabel">EN</span>
+          <svg class="lang-caret" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="lang-menu hidden" id="langMenu" role="listbox"></div>
+      </div>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <svg class="ti-sun" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12h2.5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <svg class="ti-moon" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="live-pill"><span class="live-dot"></span> <span data-i18n="badge_live">Built with AI agents</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+<div class="layout-grid">
+<div class="main-col">
+  <header class="hero">
+    <div class="eyebrow" data-i18n="hero_eyebrow">Shipment intake</div>
+    <h1 data-i18n="hero_title">Run a risk assessment on your shipment in seconds.</h1>
+    <p data-i18n="hero_sub">Enter the route and cargo details below. The request is handed to an automated workflow that scores the shipment and reports back here.</p>
+  </header>
+
+  <!-- SUBMISSION FORM -->
+  <section class="card">
+    <div class="card-head">
+      <h2><span class="step-no">1</span> <span data-i18n="section1_title">Shipment details</span></h2>
+      <span class="badge" data-i18n="badge_form">form</span>
+    </div>
+
+
+    <div class="route-strip" id="routeStrip">
+      <div class="route-point orig">
+        <div class="rp-label" data-i18n="route_origin">Origin</div>
+        <div class="rp-city placeholder" id="routeOriginCity" data-i18n="route_notset">Not set</div>
+        <div class="rp-country" id="routeOriginCountry">&nbsp;</div>
+      </div>
+      <div class="route-mid">
+        <div class="mode-icon" id="routeModeIcon">
+          <svg viewBox="0 0 24 24" fill="none" id="routeModeSvg"><path d="M2 16h20M4 16l2-6h12l2 6M9 10V6h6v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="route-line"></div>
+        <div class="mode-label" id="routeModeLabel" data-i18n="route_mode">mode</div>
+      </div>
+      <div class="route-point dest">
+        <div class="rp-label" data-i18n="route_destination">Destination</div>
+        <div class="rp-city placeholder" id="routeDestCity" data-i18n="route_notset">Not set</div>
+        <div class="rp-country" id="routeDestCountry">&nbsp;</div>
+      </div>
+    </div>
+
+    <form id="assessForm">
+      <div class="row">
+        <div class="autocomplete">
+          <label for="originCity" data-i18n="field_origin_city">Origin city</label>
+          <input type="text" id="originCity" autocomplete="off" placeholder="Start typing a city…" data-i18n-placeholder="field_city_placeholder" required>
+          <div class="ac-list hidden" id="originList"></div>
+        </div>
+        <div>
+          <label for="originCountry" data-i18n="field_origin_country">Origin country</label>
+          <input type="text" id="originCountry" placeholder="Auto-fills from city" data-i18n-placeholder="field_country_placeholder" readonly>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="autocomplete">
+          <label for="destinationCity" data-i18n="field_dest_city">Destination city</label>
+          <input type="text" id="destinationCity" autocomplete="off" placeholder="Start typing a city…" data-i18n-placeholder="field_city_placeholder" required>
+          <div class="ac-list hidden" id="destinationList"></div>
+        </div>
+        <div>
+          <label for="destinationCountry" data-i18n="field_dest_country">Destination country</label>
+          <input type="text" id="destinationCountry" placeholder="Auto-fills from city" data-i18n-placeholder="field_country_placeholder" readonly>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="transportMode" data-i18n="field_transport_mode">Transport mode</label>
+          <select id="transportMode" required>
+            <option value="" disabled selected data-i18n="opt_select_mode">Select a mode</option>
+            <option value="Sea" data-i18n="mode_sea">Sea</option>
+            <option value="Air" data-i18n="mode_air">Air</option>
+            <option value="Road" data-i18n="mode_road">Road</option>
+            <option value="Rail" data-i18n="mode_rail">Rail</option>
+            <option value="Multimodal / Intermodal" data-i18n="mode_multimodal">Multimodal / Intermodal</option>
+          </select>
+        </div>
+        <div>
+          <label for="cargoType" data-i18n="field_cargo_type">Cargo type</label>
+          <select id="cargoType" required>
+            <option value="" disabled selected data-i18n="opt_select_cargo">Select a cargo type</option>
+            <option value="Containerized Cargo" data-i18n="cargo_containerized">Containerized Cargo</option>
+            <option value="Bulk Cargo – Dry" data-i18n="cargo_bulk_dry">Bulk Cargo – Dry</option>
+            <option value="Bulk Cargo – Liquid" data-i18n="cargo_bulk_liquid">Bulk Cargo – Liquid</option>
+            <option value="Break Bulk / General Cargo" data-i18n="cargo_breakbulk">Break Bulk / General Cargo</option>
+            <option value="Neo-Bulk Cargo" data-i18n="cargo_neobulk">Neo-Bulk Cargo</option>
+            <option value="RoRo (Vehicles)" data-i18n="cargo_roro">RoRo (Vehicles)</option>
+            <option value="Oversized / Heavy-Lift / Project Cargo" data-i18n="cargo_oversized">Oversized / Heavy-Lift / Project Cargo</option>
+            <option value="Perishable Cargo" data-i18n="cargo_perishable">Perishable Cargo</option>
+            <option value="Dangerous / Hazardous Goods" data-i18n="cargo_dangerous">Dangerous / Hazardous Goods</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="cargoValue" data-i18n="field_cargo_value">Cargo value</label>
+          <div class="value-wrap">
+            <span class="cur">EUR</span>
+            <input type="number" id="cargoValue" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required>
+          </div>
+        </div>
+        <div>
+          <label for="departureDate" data-i18n="field_departure_date">Departure date</label>
+          <input type="date" id="departureDate" required>
+        </div>
+      </div>
+
+      <div style="margin-top:22px;display:flex;gap:10px;">
+        <button type="submit" class="btn-primary" id="submitBtn" data-i18n="btn_submit">Run assessment</button>
+        <button type="button" class="btn-ghost" id="resetBtn" data-i18n="btn_reset">Reset</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- STATUS + RESULT -->
+<!-- STATUS + RESULT -->
+<section class="card">
+  <div class="card-head">
+    <h2><span class="step-no">2</span> <span data-i18n="section2_title">Shipment assessment</span></h2>
+    <span class="badge" id="statusBadge" data-i18n="status_idle">idle</span>
+  </div>
+
+  <div id="resultBody">
+
+    <div class="empty-result" id="emptyResult">
+      <div class="empty-icon">◈</div>
+      <div>
+        <strong>Ready for assessment</strong>
+        <p>Submit the shipment details above to start the automated risk assessment.</p>
+      </div>
+    </div>
+
+    <!-- Assessment result -->
+    <div id="assessmentResult" class="hidden">
+
+      <!-- Shipment identity -->
+      <div class="assessment-header">
+        <div>
+          <div class="assessment-label">SHIPMENT ID</div>
+          <div class="shipment-id" id="shipmentId">—</div>
+        </div>
+
+        <div class="approval-status" id="approvalStatus">
+          <span class="status-dot"></span>
+          <span id="approvalStatusText">Awaiting approval</span>
+        </div>
+      </div>
+
+      <!-- Route -->
+      <div class="assessment-route">
+        <div>
+          <span class="assessment-label">ROUTE</span>
+          <strong id="resultRoute">—</strong>
+        </div>
+        <div>
+          <span class="assessment-label">TRANSPORT</span>
+          <strong id="resultTransport">—</strong>
+        </div>
+        <div>
+          <span class="assessment-label">CARGO</span>
+          <strong id="resultCargo">—</strong>
+        </div>
+      </div>
+
+      <!-- Overall risk -->
+      <div class="risk-summary">
+        <div class="risk-score-block">
+          <div class="assessment-label">OVERALL RISK</div>
+          <div class="risk-score">
+            <span id="overallScore">—</span>
+            <span class="risk-max">/100</span>
+          </div>
+          <div class="risk-level" id="overallLevel">—</div>
+        </div>
+
+        <div class="risk-message" id="riskMessage">
+          Assessment completed.
+        </div>
+      </div>
+
+      <!-- Risk components -->
+      <div class="risk-grid">
+
+        <div class="risk-card">
+          <div class="risk-card-title">Weather</div>
+          <div class="risk-card-value" id="weatherScore">—</div>
+          <div class="risk-card-level" id="weatherLevel">—</div>
+        </div>
+
+        <div class="risk-card">
+          <div class="risk-card-title">Holidays</div>
+          <div class="risk-card-value" id="holidayScore">—</div>
+          <div class="risk-card-level" id="holidayLevel">—</div>
+        </div>
+
+        <div class="risk-card">
+          <div class="risk-card-title">Disruption</div>
+          <div class="risk-card-value" id="disruptionScore">—</div>
+          <div class="risk-card-level" id="disruptionLevel">—</div>
+        </div>
+
+      </div>
+
+      <!-- Timeline -->
+      <div class="timeline-block">
+        <div class="assessment-label">SHIPMENT TIMELINE</div>
+
+        <div class="timeline-grid">
+
+          <div class="timeline-item">
+            <span>Departure</span>
+            <strong id="departureDateResult">—</strong>
+          </div>
+
+          <div class="timeline-item">
+            <span>Baseline ETA</span>
+            <strong id="baselineEta">—</strong>
+          </div>
+
+          <div class="timeline-item">
+            <span>Risk-adjusted ETA</span>
+            <strong id="riskAdjustedEta">—</strong>
+          </div>
+
+          <div class="timeline-item">
+            <span>Estimated delay</span>
+            <strong id="estimatedDelay">—</strong>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Approval message -->
+      <div class="approval-panel" id="approvalPanel">
+
+        <div class="approval-icon" id="approvalIcon">⏳</div>
+
+        <div>
+          <strong id="approvalTitle">AWAITING MANAGER APPROVAL</strong>
+          <p id="approvalMessage">
+            The shipment assessment has been completed. A manager approval
+            request has been sent through Slack.
+          </p>
+        </div>
+
+      </div>
+
+      <div class="meta" id="resultMeta"></div>
+
+    </div>
+
+  </div>
+
+  <div class="error-box hidden" id="errorBox"></div>
+</section>
+</div><!-- /main-col -->
+
+<aside class="visual-rail">
+  <div class="vr-dotgrid"></div>
+  <div class="vr-scanline"></div>
+
+  <div class="vr-head">
+    <div class="vr-eyebrow"><span class="rec-dot"></span> <span data-i18n="vr_eyebrow">Live risk signal</span></div>
+    <h2 class="vr-title" data-i18n="vr_title">Why every shipment needs a risk check today</h2>
+  </div>
+
+  <div class="vr-map">
+    <svg viewBox="0 0 380 260" preserveAspectRatio="xMidYMid meet">
+
+      <!-- four distinct routes: air (top), rail (upper-mid), road (lower-mid), sea (bottom) -->
+      <path d="M 15 65 Q 190 12 365 60" fill="none" stroke="var(--accent-2)" stroke-width="1.3" stroke-dasharray="7 6" stroke-linecap="round" opacity="0.55"/>
+      <path d="M 15 118 C 100 98, 170 132, 260 102 S 340 88, 365 98" fill="none" stroke="var(--mode-rail)" stroke-width="1.3" stroke-dasharray="2 3.5" stroke-linecap="round" opacity="0.55"/>
+      <path d="M 15 162 L 110 148 L 190 172 L 270 152 L 365 166" fill="none" stroke="var(--warn)" stroke-width="1.3" stroke-dasharray="6 5" stroke-linecap="round" opacity="0.55"/>
+      <path d="M 15 222 C 100 202, 180 232, 260 207 S 340 192, 365 202" fill="none" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="2 7" stroke-linecap="round" opacity="0.6"/>
+
+      <!-- origin / destination hubs -->
+      <circle class="vr-node" cx="15" cy="145" r="4" fill="var(--muted)"/>
+      <circle class="vr-node" cx="365" cy="145" r="4.5" fill="var(--accent)"/>
+
+      <!-- risk hotspots: pulsing rings + dot -->
+      <g transform="translate(150,152)">
+        <circle class="vr-risk-ring" cx="0" cy="0" r="3" fill="none" stroke="var(--err)" stroke-width="1.4" style="animation-delay:0s"/>
+        <circle class="vr-risk-dot" cx="0" cy="0" r="3.5" fill="var(--err)" style="animation-delay:0s"/>
+        <circle class="vr-blast" cx="0" cy="0" r="2" stroke="var(--err)" style="animation-delay:0s"/>
+        <circle class="vr-blast-flash" cx="0" cy="0" r="9" fill="var(--err)" style="animation-delay:0s"/>
+      </g>
+      <g transform="translate(255,110)">
+        <circle class="vr-risk-ring" cx="0" cy="0" r="3" fill="none" stroke="var(--warn)" stroke-width="1.4" style="animation-delay:0.9s"/>
+        <circle class="vr-risk-dot" cx="0" cy="0" r="3.5" fill="var(--warn)" style="animation-delay:0.9s"/>
+        <circle class="vr-blast" cx="0" cy="0" r="2" stroke="var(--warn)" style="animation-delay:4.5s"/>
+        <circle class="vr-blast-flash" cx="0" cy="0" r="9" fill="var(--warn)" style="animation-delay:4.5s"/>
+      </g>
+      <g transform="translate(190,45)">
+        <circle class="vr-risk-ring" cx="0" cy="0" r="3" fill="none" stroke="var(--warn)" stroke-width="1.4" style="animation-delay:1.7s"/>
+        <circle class="vr-risk-dot" cx="0" cy="0" r="3.5" fill="var(--warn)" style="animation-delay:1.7s"/>
+      </g>
+
+      <!-- SEA: ship travels the bottom lane -->
+      <g class="vr-mover" style="color:var(--accent)">
+        <circle r="7" fill="var(--bg-2)" stroke="var(--accent)" stroke-width="1.2"/>
+        <path d="M-3.4 1.4c1.5 1.1 2.9 1.1 4.3 0s2.9-1.1 4.3 0" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round" transform="translate(-2.2,0.4) scale(0.62)"/>
+        <path d="M-2 -0.4l0.4 -2.6h2.4l1.1 2.6M-0.6 -3v-1h1.1" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(-2.2,0.4) scale(0.62)"/>
+        <animateMotion dur="13s" begin="0s" repeatCount="indefinite" rotate="auto" path="M 15 222 C 100 202, 180 232, 260 207 S 340 192, 365 202"/>
+      </g>
+
+      <!-- AIR: plane travels the top arc, fastest -->
+      <g class="vr-mover" style="color:var(--accent-2)">
+        <circle r="7" fill="var(--bg-2)" stroke="var(--accent-2)" stroke-width="1.2"/>
+        <path d="M-3.6 0.2l2.9-0.7 1.4-2.9 0.8 0.3-0.8 2.6 1.9 0.3v0.7l-1.9 0.3 0.8 2.6-0.8 0.3-1.4-2.9z" fill="currentColor" transform="translate(0,-0.2) scale(0.62)"/>
+        <animateMotion dur="7s" begin="0s" repeatCount="indefinite" rotate="auto" path="M 15 65 Q 190 12 365 60"/>
+      </g>
+
+      <!-- ROAD: truck travels the angular middle-lower lane -->
+      <g class="vr-mover" style="color:var(--warn)">
+        <circle r="7" fill="var(--bg-2)" stroke="var(--warn)" stroke-width="1.2"/>
+        <path d="M-3.6 1.6h7.2M-2.6 1.6l0.6-2.4h3.6l0.6 2.4M-1.6 2.8a0.7 0.7 0 100-1.4 0.7 0.7 0 000 1.4zM1.6 2.8a0.7 0.7 0 100-1.4 0.7 0.7 0 000 1.4z" stroke="currentColor" stroke-width="0.9" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="scale(0.62)"/>
+        <animateMotion dur="10s" begin="0s" repeatCount="indefinite" rotate="0" path="M 15 162 L 110 148 L 190 172 L 270 152 L 365 166"/>
+      </g>
+
+      <!-- RAIL: train travels the upper-mid track -->
+      <g class="vr-mover" style="color:var(--mode-rail)">
+        <circle r="7" fill="var(--bg-2)" stroke="var(--mode-rail)" stroke-width="1.2"/>
+        <rect x="-2.2" y="-3" width="4.4" height="4.8" rx="1" stroke="currentColor" stroke-width="0.9" fill="none" transform="scale(0.62)"/>
+        <path d="M-2.2 -0.2h4.4M-1.4 3l-0.8 1M1.4 3l0.8 1" stroke="currentColor" stroke-width="0.9" fill="none" stroke-linecap="round" transform="scale(0.62)"/>
+        <animateMotion dur="9s" begin="0s" repeatCount="indefinite" rotate="auto" path="M 15 118 C 100 98, 170 132, 260 102 S 340 88, 365 98"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="vr-legend">
+    <span><i style="background:var(--accent)"></i><span data-i18n="mode_sea">Sea</span></span>
+    <span><i style="background:var(--accent-2)"></i><span data-i18n="mode_air">Air</span></span>
+    <span><i style="background:var(--warn)"></i><span data-i18n="mode_road">Road</span></span>
+    <span><i style="background:var(--mode-rail)"></i><span data-i18n="mode_rail">Rail</span></span>
+  </div>
+
+  <div class="vr-eta">
+    <div class="vr-eta-icon">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="vr-eta-body">
+      <div class="vr-eta-label" data-i18n="vr_eta_label">Predicted arrival window</div>
+      <div class="vr-eta-stack">
+        <div class="vr-eta-item" style="--i:0" data-i18n="vr_eta_1">18–22 days · normal conditions</div>
+        <div class="vr-eta-item" style="--i:1" data-i18n="vr_eta_2">21–27 days · reroute in effect</div>
+        <div class="vr-eta-item" style="--i:2" data-i18n="vr_eta_3">16–19 days · fast lane cleared</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vr-story">
+    <div class="vr-caption-stack">
+      <div class="vr-caption" style="--i:0">
+        <span class="vc-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l9 16H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 9v5M12 17h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <p data-i18n="vr_caption_1">Conflict and sanctions can reroute entire shipping lanes overnight.</p>
+      </div>
+      <div class="vr-caption" style="--i:1">
+        <span class="vc-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 17h16M6 17V9l6-4 6 4v8M9 17v-4h6v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <p data-i18n="vr_caption_2">Port congestion and labor disputes ripple through global schedules.</p>
+      </div>
+      <div class="vr-caption" style="--i:2">
+        <span class="vc-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 17l5-6 4 4 8-10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 5h5v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <p data-i18n="vr_caption_3">Fuel and freight rates swing with little warning.</p>
+      </div>
+      <div class="vr-caption" style="--i:3">
+        <span class="vc-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+        <p data-i18n="vr_caption_4">Security and piracy risk zones shift with the political map.</p>
+      </div>
+      <div class="vr-caption" style="--i:4">
+        <span class="vc-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M10 13a4 4 0 005.66 0l3-3a4 4 0 00-5.66-5.66l-1 1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 11a4 4 0 00-5.66 0l-3 3a4 4 0 005.66 5.66l1-1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+        <p data-i18n="vr_caption_5">One disruption anywhere can cascade through the whole chain.</p>
+      </div>
+    </div>
+    <div class="vr-footline"><span data-i18n="vr_footline">Risk factors, always shifting</span><span class="bar"></span></div>
+  </div>
+</aside>
+
+</div><!-- /layout-grid -->
+
+<footer class="site-footer">
+  <div class="sf-pitch">
+    <div class="sf-pitch-title" data-i18n="sf_pitch_title">Know the risk before the container leaves the yard.</div>
+    <p data-i18n="sf_pitch_body">One shipment can carry weeks of exposure — a rerouted lane, a port strike, a currency swing. This engine turns scattered signals into a single, defensible number your team can act on in seconds, not spreadsheets. If that's a problem worth solving for your operation, let's talk.</p>
+  </div>
+
+  <div class="sf-contact">
+    <a class="sf-link" href="https://www.linkedin.com/in/ashwini-u-bb65061a/" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.5 8h4V23h-4V8zM8.5 8h3.8v2.06h.05c.53-1 1.83-2.06 3.77-2.06C20.5 8 22 10.4 22 14.3V23h-4v-7.9c0-1.9-.03-4.3-2.6-4.3-2.6 0-3 2-3 4.1V23h-4V8z"/></svg>
+      <span>Ashwini Upadhyay — LinkedIn</span>
+    </a>
+    <a class="sf-link" href="mailto:upadhyay.ashwini@gmail.com">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18v12H3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>upadhyay.ashwini@gmail.com</span>
+    </a>
+  </div>
+
+  <div class="sf-meta" data-i18n="sf_meta">
+    Cargo Risk Engine — a working demo, built end-to-end with AI-assisted development.
+  </div>
+  <div class="sf-copyright">
+    © <span id="copyYear">2026</span> Ashwini Upadhyay. All rights reserved.
+  </div>
+</footer>
+
+</div>
+
+<script>
+/* ============================================================
+   CONFIGURATION
+   ============================================================ */
+
+const CONFIG = {
+  SUBMIT_WEBHOOK_URL:
+    "https://ashwiniupadhyay.app.n8n.cloud/webhook/shipment-risk-assessment",
+
+  STATUS_WEBHOOK_URL:
+    "https://ashwiniupadhyay.app.n8n.cloud/webhook/shipment-status",
+
+  POLL_INTERVAL_MS: 5000,
+
+  // Keep polling for up to 30 minutes because manager approval
+  // may take time.
+  POLL_TIMEOUT_MS: 1800000
+};
+
+
+/* ============================================================
+   ROUTE STRIP
+   ============================================================ */
+
+const MODE_I18N_KEY = {
+  "Sea": "mode_sea",
+  "Air": "mode_air",
+  "Road": "mode_road",
+  "Rail": "mode_rail",
+  "Multimodal / Intermodal": "mode_multimodal"
+};
+
+const MODE_ICONS = {
+  "Sea":
+    '<path d="M2 18c1.5 1.3 3 1.3 4.5 0s3-1.3 4.5 0 3 1.3 4.5 0 3-1.3 4.5 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M6 14l1-7h6l3 7M9 7V4h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  "Air":
+    '<path d="M3 13l8-2 4-8 2 1-2 7 5 1v2l-5 1 2 7-2 1-4-8-8-2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
+
+  "Road":
+    '<path d="M3 16h18M6 16l1.5-6h9L18 16M8 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM16 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  "Rail":
+    '<rect x="6" y="4" width="12" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 12h12M9 20l-2 2M15 20l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+
+  "Multimodal / Intermodal":
+    '<rect x="3" y="6" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="11" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M10 9.5h4M17.5 11V9.5a2 2 0 00-2-2H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'
+};
+
+const DEFAULT_ICON =
+  '<path d="M2 16h20M4 16l2-6h12l2 6M9 10V6h6v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>';
+
+
+function updateRouteStrip(){
+
+  const oc =
+    document.getElementById("originCity").value.trim();
+
+  const ocC =
+    document.getElementById("originCountry").value.trim();
+
+  const dc =
+    document.getElementById("destinationCity").value.trim();
+
+  const dcC =
+    document.getElementById("destinationCountry").value.trim();
+
+  const mode =
+    document.getElementById("transportMode").value;
+
+  const rOC =
+    document.getElementById("routeOriginCity");
+
+  const rDC =
+    document.getElementById("routeDestCity");
+
+  rOC.textContent = oc || t("route_notset");
+  rOC.classList.toggle("placeholder", !oc);
+
+  rDC.textContent = dc || t("route_notset");
+  rDC.classList.toggle("placeholder", !dc);
+
+  document.getElementById("routeOriginCountry").textContent =
+    ocC || "\u00A0";
+
+  document.getElementById("routeDestCountry").textContent =
+    dcC || "\u00A0";
+
+  document.getElementById("routeModeLabel").textContent =
+    mode ? t(MODE_I18N_KEY[mode] || "") || mode : t("route_mode");
+
+  document.getElementById("routeModeSvg").innerHTML =
+    MODE_ICONS[mode] || DEFAULT_ICON;
+}
+
+
+[
+  "originCity",
+  "originCountry",
+  "destinationCity",
+  "destinationCountry"
+].forEach(id => {
+
+  document.getElementById(id)
+    .addEventListener("input", updateRouteStrip);
+
+});
+
+document.getElementById("transportMode")
+  .addEventListener("change", updateRouteStrip);
+
+
+/* ============================================================
+   CITY AUTOCOMPLETE
+   ============================================================ */
+
+function setupCityAutocomplete(
+  inputId,
+  listId,
+  countryInputId
+){
+
+  const input =
+    document.getElementById(inputId);
+
+  const list =
+    document.getElementById(listId);
+
+  const countryInput =
+    document.getElementById(countryInputId);
+
+  let debounceTimer = null;
+  let activeIndex = -1;
+  let currentResults = [];
+
+
+  function clearCountry(){
+
+    countryInput.value = "";
+
+    updateRouteStrip();
+
+  }
+
+
+  function closeList(){
+
+    list.classList.add("hidden");
+
+    list.innerHTML = "";
+
+    activeIndex = -1;
+
+  }
+
+
+  function selectResult(r){
+
+    input.value = r.name;
+
+    countryInput.value = r.country || "";
+
+    closeList();
+
+    updateRouteStrip();
+
+  }
+
+
+  function renderList(results){
+
+    currentResults = results;
+
+    if(!results.length){
+
+      list.innerHTML =
+        `<div class="ac-empty">No matching cities</div>`;
+
+      list.classList.remove("hidden");
+
+      return;
+
+    }
+
+
+    list.innerHTML =
+      results.map((r, i) => `
+        <div class="ac-item" data-i="${i}">
+          <span>
+            ${r.name}${r.admin1 ? ", " + r.admin1 : ""}
+          </span>
+          <span class="c">
+            ${r.country || ""}
+          </span>
+        </div>
+      `).join("");
+
+
+    list.classList.remove("hidden");
+
+
+    [
+      ...list.querySelectorAll(".ac-item")
+    ].forEach(el => {
+
+      el.addEventListener("mousedown", e => {
+
+        e.preventDefault();
+
+        selectResult(
+          currentResults[
+            Number(el.dataset.i)
+          ]
+        );
+
+      });
+
+    });
+
+  }
+
+
+  async function search(q){
+
+    try{
+
+      const url =
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=en&format=json`;
+
+      const r =
+        await fetch(url);
+
+      const d =
+        await r.json();
+
+      renderList(d.results || []);
+
+    }catch(e){
+
+      list.innerHTML =
+        `<div class="ac-empty">
+          Search unavailable — type the city and country manually.
+        </div>`;
+
+      list.classList.remove("hidden");
+
+    }
+
+  }
+
+
+  input.addEventListener("input", () => {
+
+    clearCountry();
+
+    const q =
+      input.value.trim();
+
+    clearTimeout(debounceTimer);
+
+    if(q.length < 2){
+
+      closeList();
+
+      return;
+
+    }
+
+    debounceTimer =
+      setTimeout(
+        () => search(q),
+        300
+      );
+
+  });
+
+
+  input.addEventListener("keydown", e => {
+
+    const items =
+      [...list.querySelectorAll(".ac-item")];
+
+    if(!items.length) return;
+
+
+    if(e.key === "ArrowDown"){
+
+      e.preventDefault();
+
+      activeIndex =
+        Math.min(
+          activeIndex + 1,
+          items.length - 1
+        );
+
+    }
+
+    else if(e.key === "ArrowUp"){
+
+      e.preventDefault();
+
+      activeIndex =
+        Math.max(
+          activeIndex - 1,
+          0
+        );
+
+    }
+
+    else if(
+      e.key === "Enter" &&
+      activeIndex >= 0
+    ){
+
+      e.preventDefault();
+
+      selectResult(
+        currentResults[activeIndex]
+      );
+
+      return;
+
+    }
+
+    else{
+
+      return;
+
+    }
+
+
+    items.forEach((el, i) => {
+
+      el.classList.toggle(
+        "active",
+        i === activeIndex
+      );
+
+    });
+
+  });
+
+
+  input.addEventListener(
+    "blur",
+    () => setTimeout(closeList, 120)
+  );
+
+}
+
+
+setupCityAutocomplete(
+  "originCity",
+  "originList",
+  "originCountry"
+);
+
+setupCityAutocomplete(
+  "destinationCity",
+  "destinationList",
+  "destinationCountry"
+);
+
+
+/* ============================================================
+   DOM REFERENCES
+   ============================================================ */
+
+const form =
+  document.getElementById("assessForm");
+
+const submitBtn =
+  document.getElementById("submitBtn");
+
+const resetBtn =
+  document.getElementById("resetBtn");
+
+const statusBadge =
+  document.getElementById("statusBadge");
+
+const errorBox =
+  document.getElementById("errorBox");
+
+const emptyResult =
+  document.getElementById("emptyResult");
+
+const assessmentResult =
+  document.getElementById("assessmentResult");
+
+const shipmentId =
+  document.getElementById("shipmentId");
+
+const approvalStatus =
+  document.getElementById("approvalStatus");
+
+const approvalStatusText =
+  document.getElementById("approvalStatusText");
+
+const resultRoute =
+  document.getElementById("resultRoute");
+
+const resultTransport =
+  document.getElementById("resultTransport");
+
+const resultCargo =
+  document.getElementById("resultCargo");
+
+const overallScore =
+  document.getElementById("overallScore");
+
+const overallLevel =
+  document.getElementById("overallLevel");
+
+const riskMessage =
+  document.getElementById("riskMessage");
+
+const weatherScore =
+  document.getElementById("weatherScore");
+
+const weatherLevel =
+  document.getElementById("weatherLevel");
+
+const holidayScore =
+  document.getElementById("holidayScore");
+
+const holidayLevel =
+  document.getElementById("holidayLevel");
+
+const disruptionScore =
+  document.getElementById("disruptionScore");
+
+const disruptionLevel =
+  document.getElementById("disruptionLevel");
+
+const departureDateResult =
+  document.getElementById("departureDateResult");
+
+const baselineEta =
+  document.getElementById("baselineEta");
+
+const riskAdjustedEta =
+  document.getElementById("riskAdjustedEta");
+
+const estimatedDelay =
+  document.getElementById("estimatedDelay");
+
+const approvalPanel =
+  document.getElementById("approvalPanel");
+
+const approvalIcon =
+  document.getElementById("approvalIcon");
+
+const approvalTitle =
+  document.getElementById("approvalTitle");
+
+const approvalMessage =
+  document.getElementById("approvalMessage");
+
+const resultMeta =
+  document.getElementById("resultMeta");
+
+
+let pollTimer = null;
+let currentShipmentId = null;
+let pollingStartedAt = null;
+
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+
+function clearError(){
+
+  errorBox.classList.add("hidden");
+
+  errorBox.innerHTML = "";
+
+}
+
+
+function showError(message){
+
+  errorBox.classList.remove("hidden");
+
+  errorBox.innerHTML =
+    `<span>⚠</span><span>${escapeHtml(message)}</span>`;
+
+}
+
+
+function escapeHtml(value){
+
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+}
+
+
+function formatDate(dateString){
+
+  if(!dateString) return "—";
+
+  const date =
+    new Date(dateString + "T00:00:00");
+
+  if(Number.isNaN(date.getTime())){
+
+    return dateString;
+
+  }
+
+  return date.toLocaleDateString(
+    undefined,
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    }
+  );
+
+}
+
+
+function formatDelay(days){
+
+  const n =
+    Number(days ?? 0);
+
+  if(n === 1) return "1 day";
+
+  return `${n} days`;
+
+}
+
+
+/* ============================================================
+   STATUS DISPLAY
+   ============================================================ */
+
+const STATUS_I18N_KEY = {
+  "idle": "status_idle",
+  "SUBMITTING": "status_submitting",
+  "AWAITING_APPROVAL": "status_awaiting_approval",
+  "APPROVED": "status_approved",
+  "REJECTED": "status_rejected",
+  "ERROR": "status_error"
+};
+
+let lastRawStatus = "idle";
+
+function setBadge(status){
+  lastRawStatus = status || "idle";
+  const key = STATUS_I18N_KEY[lastRawStatus];
+  statusBadge.textContent = key ? t(key) : lastRawStatus;
+}
+
+function reapplyStatusBadge(){
+  setBadge(lastRawStatus);
+}
+
+
+function setApprovalState(status){
+
+  const normalized =
+    String(status || "")
+      .trim()
+      .toUpperCase();
+
+
+  approvalStatus.classList.remove(
+    "approved",
+    "rejected"
+  );
+
+  approvalPanel.classList.remove(
+    "approved",
+    "rejected"
+  );
+
+
+  if(normalized === "APPROVED"){
+
+    setBadge("APPROVED");
+
+    approvalStatus.classList.add(
+      "approved"
+    );
+
+    approvalPanel.classList.add(
+      "approved"
+    );
+
+    approvalIcon.textContent = "✓";
+
+    approvalTitle.textContent =
+      "APPROVED";
+
+    approvalMessage.textContent =
+      "Manager approval received. The shipment has been released for execution.";
+
+    approvalStatusText.textContent =
+      "Approved";
+
+  }
+
+  else if(normalized === "REJECTED"){
+
+    setBadge("REJECTED");
+
+    approvalStatus.classList.add(
+      "rejected"
+    );
+
+    approvalPanel.classList.add(
+      "rejected"
+    );
+
+    approvalIcon.textContent = "×";
+
+    approvalTitle.textContent =
+      "REJECTED";
+
+    approvalMessage.textContent =
+      "Manager rejected the shipment. The shipment should remain on hold.";
+
+    approvalStatusText.textContent =
+      "Rejected";
+
+  }
+
+  else{
+
+    setBadge("AWAITING_APPROVAL");
+
+    approvalIcon.textContent = "⏳";
+
+    approvalTitle.textContent =
+      "AWAITING MANAGER APPROVAL";
+
+    approvalMessage.textContent =
+      "The shipment assessment has been completed. A manager approval request has been sent through Slack.";
+
+    approvalStatusText.textContent =
+      "Awaiting approval";
+
+  }
+
+}
+
+
+/* ============================================================
+   RISK LEVEL DISPLAY
+   ============================================================ */
+
+function setRiskLevel(element, level){
+
+  element.textContent =
+    String(level || "LOW").toUpperCase();
+
+}
+
+
+function renderAssessment(data){
+
+  if(!data) return;
+
+
+  emptyResult.classList.add("hidden");
+
+  assessmentResult.classList.remove("hidden");
+
+
+  /* Shipment */
+
+  shipmentId.textContent =
+    data.shipment_id || "—";
+
+
+  resultRoute.textContent =
+    `${data.route?.origin_city || "—"}, ${data.route?.origin_country || ""} → ${data.route?.destination_city || "—"}, ${data.route?.destination_country || ""}`;
+
+
+  resultTransport.textContent =
+    data.transport_mode || "—";
+
+
+  resultCargo.textContent =
+    data.cargo_type || "—";
+
+
+  /* Overall risk */
+
+  const score =
+    Number(
+      data.overall?.score ??
+      data.combined_risk_score ??
+      0
+    );
+
+
+  overallScore.textContent =
+    score;
+
+
+  setRiskLevel(
+    overallLevel,
+    data.overall?.level ??
+    data.combined_risk_level ??
+    "LOW"
+  );
+
+
+  if(score >= 60){
+
+    riskMessage.textContent =
+      "High shipment risk detected. Manager approval is required before execution.";
+
+  }
+
+  else if(score >= 30){
+
+    riskMessage.textContent =
+      "Moderate shipment risk detected. Review the assessment before execution.";
+
+  }
+
+  else{
+
+    riskMessage.textContent =
+      "Low shipment risk detected. The shipment is currently awaiting manager approval.";
+
+  }
+
+
+  /* Risk components */
+
+  weatherScore.textContent =
+    Number(data.weather?.score ?? data.weather_risk_score ?? 0);
+
+  setRiskLevel(
+    weatherLevel,
+    data.weather?.level ?? data.weather_risk_level ?? "LOW"
+  );
+
+
+  holidayScore.textContent =
+    Number(data.holidays?.score ?? data.holiday_risk_score ?? 0);
+
+  setRiskLevel(
+    holidayLevel,
+    data.holidays?.level ?? data.holiday_risk_level ?? "LOW"
+  );
+
+
+  disruptionScore.textContent =
+    Number(data.disruption?.score ?? data.disruption_risk_score ?? 0);
+
+  setRiskLevel(
+    disruptionLevel,
+    data.disruption?.level ?? data.disruption_risk_level ?? "LOW"
+  );
+
+
+  /* Timeline */
+
+  departureDateResult.textContent =
+    formatDate(data.departure_date);
+
+
+  baselineEta.textContent =
+    formatDate(data.baseline_arrival_date);
+
+
+  riskAdjustedEta.textContent =
+    formatDate(data.risk_adjusted_arrival_date);
+
+
+  estimatedDelay.textContent =
+    formatDelay(data.estimated_delay_days);
+
+
+  /* Approval */
+
+  setApprovalState(data.status);
+
+
+  resultMeta.textContent =
+    data.updated_at
+      ? `Last updated ${new Date(data.updated_at).toLocaleString()}`
+      : "";
+
+
+  resultMeta.classList.remove("hidden");
+
+}
+
+
+/* ============================================================
+   SAFE JSON PARSING
+   Reads the raw text first so an empty or non-JSON response gives
+   a clear, actionable error instead of the browser's generic
+   "Unexpected end of JSON input" message.
+   ============================================================ */
+
+async function parseJsonResponse(response, label){
+
+  const text = await response.text();
+
+  if(!text || !text.trim()){
+    throw new Error(
+      `${label} returned an empty response body. In n8n, make sure the ` +
+      `workflow ends with a "Respond to Webhook" node that returns JSON ` +
+      `(e.g. { "requestId": "...", "status": "queued" }), and that you're ` +
+      `calling the Production URL, not the Test URL.`
+    );
+  }
+
+  try{
+    return JSON.parse(text);
+  }catch(e){
+    throw new Error(
+      `${label} did not return valid JSON. Raw response: ${text.slice(0, 160)}`
+    );
+  }
+
+}
+
+
+/* ============================================================
+   API #1 — SUBMIT SHIPMENT
+   ============================================================ */
+
+async function submitAssessment(payload){
+
+  const response =
+    await fetch(
+      CONFIG.SUBMIT_WEBHOOK_URL,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify(payload)
+      }
+    );
+
+
+  if(!response.ok){
+
+    throw new Error(
+      `Shipment assessment failed (${response.status})`
+    );
+
+  }
+
+
+  return parseJsonResponse(response, "Submit webhook");
+
+}
+
+
+/* ============================================================
+   API #2 — GET SHIPMENT STATUS
+   ============================================================ */
+
+async function checkShipmentStatus(
+  shipmentIdValue
+){
+
+  const url =
+    new URL(
+      CONFIG.STATUS_WEBHOOK_URL
+    );
+
+
+  url.searchParams.set(
+    "shipment_id",
+    shipmentIdValue
+  );
+
+
+  const response =
+    await fetch(
+      url.toString(),
+      {
+        method: "GET",
+        cache: "no-store"
+      }
+    );
+
+
+  if(!response.ok){
+
+    throw new Error(
+      `Status check failed (${response.status})`
+    );
+
+  }
+
+
+  return parseJsonResponse(response, "Status webhook");
+
+}
+
+
+/* ============================================================
+   STATUS POLLING
+   ============================================================ */
+
+function stopPolling(){
+
+  if(pollTimer){
+
+    clearTimeout(pollTimer);
+
+    pollTimer = null;
+
+  }
+
+}
+
+
+function pollShipmentStatus(){
+
+  stopPolling();
+
+
+  const tick = async () => {
+
+    if(
+      Date.now() - pollingStartedAt >
+      CONFIG.POLL_TIMEOUT_MS
+    ){
+
+      showError(
+        "The shipment is still awaiting manager approval. The page has stopped automatic checking, but the assessment remains active."
+      );
+
+      submitBtn.disabled = false;
+
+      return;
+
+    }
+
+
+    try{
+
+      const data =
+        await checkShipmentStatus(
+          currentShipmentId
+        );
+
+
+      /* Update the entire assessment */
+
+      renderAssessment(data);
+
+
+      const status =
+        String(data.status || "")
+          .trim()
+          .toUpperCase();
+
+
+      /* Stop when a final decision is reached */
+
+      if(
+        status === "APPROVED" ||
+        status === "REJECTED"
+      ){
+
+        submitBtn.disabled = false;
+
+        return;
+
+      }
+
+
+      /* Still waiting */
+
+      pollTimer =
+        setTimeout(
+          tick,
+          CONFIG.POLL_INTERVAL_MS
+        );
+
+
+    }catch(error){
+
+      /*
+       * Do not immediately destroy the assessment if one
+       * status request fails. Retry automatically.
+       */
+
+      pollTimer =
+        setTimeout(
+          tick,
+          CONFIG.POLL_INTERVAL_MS
+        );
+
+      console.warn(
+        "Shipment status check failed:",
+        error
+      );
+
+    }
+
+  };
+
+
+  tick();
+
+}
+
+
+/* ============================================================
+   FORM SUBMISSION
+   ============================================================ */
+
+form.addEventListener(
+  "submit",
+  async event => {
+
+    event.preventDefault();
+
+
+    clearError();
+
+    stopPolling();
+
+    resultMeta.classList.add("hidden");
+
+    submitBtn.disabled = true;
+
+    setBadge("SUBMITTING");
+
+
+    const originCountry =
+      document
+        .getElementById("originCountry")
+        .value;
+
+    const destinationCountry =
+      document
+        .getElementById("destinationCountry")
+        .value;
+
+
+    if(
+      !originCountry ||
+      !destinationCountry
+    ){
+
+      setBadge("ERROR");
+
+      showError(
+        "Pick a city from the search list for both origin and destination."
+      );
+
+      submitBtn.disabled = false;
+
+      return;
+
+    }
+
+
+    const payload = {
+
+      origin_city:
+        document
+          .getElementById("originCity")
+          .value
+          .trim(),
+
+      origin_country:
+        originCountry,
+
+      destination_city:
+        document
+          .getElementById("destinationCity")
+          .value
+          .trim(),
+
+      destination_country:
+        destinationCountry,
+
+      transport_mode:
+        document
+          .getElementById("transportMode")
+          .value,
+
+      cargo_type:
+        document
+          .getElementById("cargoType")
+          .value,
+
+      cargo_value_eur:
+        Number(
+          document
+            .getElementById("cargoValue")
+            .value
+        ),
+
+      departure_date:
+        document
+          .getElementById("departureDate")
+          .value
+
+    };
+
+
+    try{
+
+      /*
+       * API #1
+       */
+
+      const result =
+        await submitAssessment(
+          payload
+        );
+
+
+      /*
+       * API #1 already returns the
+       * complete assessment.
+       */
+
+      renderAssessment(result);
+
+
+      currentShipmentId =
+        result.shipment_id;
+
+
+      if(!currentShipmentId){
+
+        throw new Error(
+          "API #1 did not return shipment_id."
+        );
+
+      }
+
+
+      /*
+       * If API #1 already says APPROVED
+       * or REJECTED, no need to poll.
+       */
+
+      const initialStatus =
+        String(result.status || "")
+          .trim()
+          .toUpperCase();
+
+
+      if(
+        initialStatus === "APPROVED" ||
+        initialStatus === "REJECTED"
+      ){
+
+        submitBtn.disabled = false;
+
+        return;
+
+      }
+
+
+      /*
+       * Otherwise monitor Slack approval
+       * through API #2.
+       */
+
+      setBadge("AWAITING_APPROVAL");
+
+      pollingStartedAt =
+        Date.now();
+
+
+      pollShipmentStatus();
+
+
+    }catch(error){
+
+      setBadge("ERROR");
+
+      showError(
+        error.message ||
+        "Unable to submit shipment assessment."
+      );
+
+      submitBtn.disabled = false;
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   RESET
+   ============================================================ */
+
+resetBtn.addEventListener(
+  "click",
+  () => {
+
+    stopPolling();
+
+    currentShipmentId = null;
+
+    pollingStartedAt = null;
+
+    form.reset();
+
+    document.getElementById(
+      "originCountry"
+    ).value = "";
+
+    document.getElementById(
+      "destinationCountry"
+    ).value = "";
+
+
+    emptyResult.classList.remove(
+      "hidden"
+    );
+
+    assessmentResult.classList.add(
+      "hidden"
+    );
+
+
+    clearError();
+
+    resultMeta.classList.add(
+      "hidden"
+    );
+
+
+    setBadge("idle");
+
+    submitBtn.disabled = false;
+
+    updateRouteStrip();
+
+  }
+);
+
+
+/* ============================================================
+   LANGUAGE SELECTOR
+   Static UI text (hero, form, story panel, footer) can be switched
+   between the world's most widely used languages. Form field
+   VALUES sent to the webhook always stay in English (e.g.
+   transport_mode: "Sea") regardless of display language, so the
+   n8n workflow contract never changes -- only the visible labels do.
+   The actual assessment result text returned by the webhook is
+   NOT translated here, since that comes from your n8n workflow.
+   ============================================================ */
+
+const I18N_TRANSLATIONS = {"en": {"badge_live": "Built with AI agents", "hero_eyebrow": "Shipment intake", "hero_title": "Run a risk assessment on your shipment in seconds.", "hero_sub": "Enter the route and cargo details below. The request is handed to an automated workflow that scores the shipment and reports back here.", "section1_title": "Shipment details", "badge_form": "form", "route_origin": "Origin", "route_destination": "Destination", "route_notset": "Not set", "route_mode": "mode", "field_origin_city": "Origin city", "field_origin_country": "Origin country", "field_dest_city": "Destination city", "field_dest_country": "Destination country", "field_city_placeholder": "Start typing a city…", "field_country_placeholder": "Auto-fills from city", "field_transport_mode": "Transport mode", "field_cargo_type": "Cargo type", "field_cargo_value": "Cargo value", "field_departure_date": "Departure date", "opt_select_mode": "Select a mode", "opt_select_cargo": "Select a cargo type", "mode_sea": "Sea", "mode_air": "Air", "mode_road": "Road", "mode_rail": "Rail", "mode_multimodal": "Multimodal / Intermodal", "cargo_containerized": "Containerized Cargo", "cargo_bulk_dry": "Bulk Cargo – Dry", "cargo_bulk_liquid": "Bulk Cargo – Liquid", "cargo_breakbulk": "Break Bulk / General Cargo", "cargo_neobulk": "Neo-Bulk Cargo", "cargo_roro": "RoRo (Vehicles)", "cargo_oversized": "Oversized / Heavy-Lift / Project Cargo", "cargo_perishable": "Perishable Cargo", "cargo_dangerous": "Dangerous / Hazardous Goods", "btn_submit": "Run assessment", "btn_reset": "Reset", "section2_title": "Shipment assessment", "status_idle": "idle", "status_submitting": "submitting", "status_awaiting_approval": "awaiting approval", "status_approved": "approved", "status_rejected": "rejected", "status_error": "error", "vr_eyebrow": "Live risk signal", "vr_title": "Why every shipment needs a risk check today", "vr_eta_label": "Predicted arrival window", "vr_eta_1": "18–22 days · normal conditions", "vr_eta_2": "21–27 days · reroute in effect", "vr_eta_3": "16–19 days · fast lane cleared", "vr_caption_1": "Conflict and sanctions can reroute entire shipping lanes overnight.", "vr_caption_2": "Port congestion and labor disputes ripple through global schedules.", "vr_caption_3": "Fuel and freight rates swing with little warning.", "vr_caption_4": "Security and piracy risk zones shift with the political map.", "vr_caption_5": "One disruption anywhere can cascade through the whole chain.", "vr_footline": "Risk factors, always shifting", "sf_pitch_title": "Know the risk before the container leaves the yard.", "sf_pitch_body": "One shipment can carry weeks of exposure — a rerouted lane, a port strike, a currency swing. This engine turns scattered signals into a single, defensible number your team can act on in seconds, not spreadsheets. If that's a problem worth solving for your operation, let's talk.", "sf_meta": "Cargo Risk Engine — a working demo, built end-to-end with AI-assisted development."}, "es": {"badge_live": "Creado con agentes de IA", "hero_eyebrow": "Solicitud de envío", "hero_title": "Evalúa el riesgo de tu envío en segundos.", "hero_sub": "Introduce a continuación la ruta y los datos de la carga. La solicitud pasa a un flujo automatizado que puntúa el envío y muestra el resultado aquí.", "section1_title": "Detalles del envío", "badge_form": "formulario", "route_origin": "Origen", "route_destination": "Destino", "route_notset": "Sin definir", "route_mode": "modo", "field_origin_city": "Ciudad de origen", "field_origin_country": "País de origen", "field_dest_city": "Ciudad de destino", "field_dest_country": "País de destino", "field_city_placeholder": "Empieza a escribir una ciudad…", "field_country_placeholder": "Se completa según la ciudad", "field_transport_mode": "Modo de transporte", "field_cargo_type": "Tipo de carga", "field_cargo_value": "Valor de la carga", "field_departure_date": "Fecha de salida", "opt_select_mode": "Selecciona un modo", "opt_select_cargo": "Selecciona un tipo de carga", "mode_sea": "Marítimo", "mode_air": "Aéreo", "mode_road": "Carretera", "mode_rail": "Ferrocarril", "mode_multimodal": "Multimodal / Intermodal", "cargo_containerized": "Carga en contenedor", "cargo_bulk_dry": "Granel seco", "cargo_bulk_liquid": "Granel líquido", "cargo_breakbulk": "Carga general / fraccionada", "cargo_neobulk": "Carga neo-granel", "cargo_roro": "RoRo (vehículos)", "cargo_oversized": "Sobredimensionada / carga pesada / proyecto", "cargo_perishable": "Carga perecedera", "cargo_dangerous": "Mercancías peligrosas", "btn_submit": "Evaluar envío", "btn_reset": "Restablecer", "section2_title": "Evaluación del envío", "status_idle": "inactivo", "status_submitting": "enviando", "status_awaiting_approval": "pendiente de aprobación", "status_approved": "aprobado", "status_rejected": "rechazado", "status_error": "error", "vr_eyebrow": "Señal de riesgo en vivo", "vr_title": "Por qué todo envío necesita hoy una evaluación de riesgo", "vr_eta_label": "Ventana de llegada prevista", "vr_eta_1": "18–22 días · condiciones normales", "vr_eta_2": "21–27 días · desvío activo", "vr_eta_3": "16–19 días · vía despejada", "vr_caption_1": "Un conflicto o unas sanciones pueden desviar rutas marítimas enteras de la noche a la mañana.", "vr_caption_2": "La congestión portuaria y los conflictos laborales afectan los horarios globales.", "vr_caption_3": "Las tarifas de combustible y de flete cambian con poco aviso.", "vr_caption_4": "Las zonas de riesgo de seguridad y piratería se mueven con el mapa político.", "vr_caption_5": "Una sola interrupción en cualquier punto puede afectar toda la cadena.", "vr_footline": "Factores de riesgo, siempre cambiantes", "sf_pitch_title": "Conoce el riesgo antes de que el contenedor salga del patio.", "sf_pitch_body": "Un solo envío puede acumular semanas de exposición: una ruta desviada, una huelga portuaria, un cambio de divisa. Este motor convierte señales dispersas en un número único y justificable que tu equipo puede usar en segundos, no en hojas de cálculo. Si eso es un problema que vale la pena resolver, hablemos.", "sf_meta": "Cargo Risk Engine: una demo funcional, creada de principio a fin con desarrollo asistido por IA."}, "fr": {"badge_live": "Conçu avec des agents IA", "hero_eyebrow": "Demande d'expédition", "hero_title": "Évaluez le risque de votre expédition en quelques secondes.", "hero_sub": "Saisissez ci-dessous l'itinéraire et les détails de la cargaison. La demande est transmise à un flux automatisé qui évalue l'expédition et affiche le résultat ici.", "section1_title": "Détails de l'expédition", "badge_form": "formulaire", "route_origin": "Origine", "route_destination": "Destination", "route_notset": "Non défini", "route_mode": "mode", "field_origin_city": "Ville d'origine", "field_origin_country": "Pays d'origine", "field_dest_city": "Ville de destination", "field_dest_country": "Pays de destination", "field_city_placeholder": "Commencez à saisir une ville…", "field_country_placeholder": "Rempli automatiquement", "field_transport_mode": "Mode de transport", "field_cargo_type": "Type de cargaison", "field_cargo_value": "Valeur de la cargaison", "field_departure_date": "Date de départ", "opt_select_mode": "Choisir un mode", "opt_select_cargo": "Choisir un type de cargaison", "mode_sea": "Maritime", "mode_air": "Aérien", "mode_road": "Routier", "mode_rail": "Ferroviaire", "mode_multimodal": "Multimodal / Intermodal", "cargo_containerized": "Cargaison conteneurisée", "cargo_bulk_dry": "Vrac sec", "cargo_bulk_liquid": "Vrac liquide", "cargo_breakbulk": "Cargaison générale / conventionnelle", "cargo_neobulk": "Cargaison néo-vrac", "cargo_roro": "RoRo (véhicules)", "cargo_oversized": "Hors gabarit / colis lourd / projet", "cargo_perishable": "Marchandises périssables", "cargo_dangerous": "Marchandises dangereuses", "btn_submit": "Lancer l'évaluation", "btn_reset": "Réinitialiser", "section2_title": "Évaluation de l'expédition", "status_idle": "en attente", "status_submitting": "envoi en cours", "status_awaiting_approval": "en attente d'approbation", "status_approved": "approuvé", "status_rejected": "rejeté", "status_error": "erreur", "vr_eyebrow": "Signal de risque en direct", "vr_title": "Pourquoi chaque expédition mérite un contrôle de risque aujourd'hui", "vr_eta_label": "Fenêtre d'arrivée prévue", "vr_eta_1": "18–22 jours · conditions normales", "vr_eta_2": "21–27 jours · déviation en cours", "vr_eta_3": "16–19 jours · voie dégagée", "vr_caption_1": "Un conflit ou des sanctions peuvent dévier des routes maritimes entières du jour au lendemain.", "vr_caption_2": "La congestion portuaire et les conflits sociaux perturbent les plannings mondiaux.", "vr_caption_3": "Les tarifs du carburant et du fret évoluent avec peu de préavis.", "vr_caption_4": "Les zones de risque sécuritaire et de piraterie évoluent avec la carte politique.", "vr_caption_5": "Une seule perturbation, où qu'elle soit, peut se propager dans toute la chaîne.", "vr_footline": "Facteurs de risque, en constante évolution", "sf_pitch_title": "Connaissez le risque avant que le conteneur ne quitte le parc.", "sf_pitch_body": "Une seule expédition peut porter des semaines d'exposition : un itinéraire dévié, une grève portuaire, une fluctuation monétaire. Ce moteur transforme des signaux épars en un seul chiffre fiable que votre équipe peut exploiter en quelques secondes, sans tableur. Si c'est un problème qui mérite d'être résolu pour votre activité, parlons-en.", "sf_meta": "Cargo Risk Engine — une démo fonctionnelle, conçue de bout en bout avec l'aide de l'IA."}, "de": {"badge_live": "Mit KI-Agenten entwickelt", "hero_eyebrow": "Sendungsanfrage", "hero_title": "Bewerten Sie das Risiko Ihrer Sendung in Sekunden.", "hero_sub": "Geben Sie unten Route und Frachtdetails ein. Die Anfrage geht an einen automatisierten Workflow, der die Sendung bewertet und das Ergebnis hier anzeigt.", "section1_title": "Sendungsdetails", "badge_form": "Formular", "route_origin": "Herkunft", "route_destination": "Ziel", "route_notset": "Nicht festgelegt", "route_mode": "Modus", "field_origin_city": "Herkunftsstadt", "field_origin_country": "Herkunftsland", "field_dest_city": "Zielstadt", "field_dest_country": "Zielland", "field_city_placeholder": "Stadt eingeben…", "field_country_placeholder": "Wird automatisch ausgefüllt", "field_transport_mode": "Transportart", "field_cargo_type": "Frachtart", "field_cargo_value": "Frachtwert", "field_departure_date": "Abfahrtsdatum", "opt_select_mode": "Transportart wählen", "opt_select_cargo": "Frachtart wählen", "mode_sea": "See", "mode_air": "Luft", "mode_road": "Straße", "mode_rail": "Schiene", "mode_multimodal": "Multimodal / Intermodal", "cargo_containerized": "Containerfracht", "cargo_bulk_dry": "Schüttgut, trocken", "cargo_bulk_liquid": "Schüttgut, flüssig", "cargo_breakbulk": "Stückgut / Sammelgut", "cargo_neobulk": "Neo-Bulk-Fracht", "cargo_roro": "RoRo (Fahrzeuge)", "cargo_oversized": "Übergroß / Schwerlast / Projektladung", "cargo_perishable": "Verderbliche Fracht", "cargo_dangerous": "Gefahrgut", "btn_submit": "Bewertung starten", "btn_reset": "Zurücksetzen", "section2_title": "Sendungsbewertung", "status_idle": "inaktiv", "status_submitting": "wird gesendet", "status_awaiting_approval": "wartet auf Freigabe", "status_approved": "genehmigt", "status_rejected": "abgelehnt", "status_error": "Fehler", "vr_eyebrow": "Live-Risikosignal", "vr_title": "Warum heute jede Sendung eine Risikoprüfung braucht", "vr_eta_label": "Voraussichtliches Ankunftsfenster", "vr_eta_1": "18–22 Tage · normale Bedingungen", "vr_eta_2": "21–27 Tage · Umleitung aktiv", "vr_eta_3": "16–19 Tage · Route frei", "vr_caption_1": "Konflikte und Sanktionen können ganze Schifffahrtsrouten über Nacht umleiten.", "vr_caption_2": "Hafenstaus und Arbeitskonflikte wirken sich auf globale Zeitpläne aus.", "vr_caption_3": "Treibstoff- und Frachtraten schwanken oft ohne Vorwarnung.", "vr_caption_4": "Sicherheits- und Piraterierisikozonen verschieben sich mit der politischen Lage.", "vr_caption_5": "Eine einzige Störung kann sich auf die gesamte Lieferkette auswirken.", "vr_footline": "Risikofaktoren, ständig im Wandel", "sf_pitch_title": "Kennen Sie das Risiko, bevor der Container den Hof verlässt.", "sf_pitch_body": "Eine einzige Sendung kann wochenlange Risiken bergen — eine umgeleitete Route, ein Hafenstreik, ein Währungsschwanken. Diese Engine bündelt verstreute Signale zu einer einzigen, belastbaren Kennzahl, die Ihr Team in Sekunden nutzen kann, nicht in Tabellen. Wenn das ein Problem ist, das sich für Ihren Betrieb zu lösen lohnt, lassen Sie uns sprechen.", "sf_meta": "Cargo Risk Engine — eine funktionierende Demo, durchgängig mit KI-gestützter Entwicklung gebaut."}, "it": {"badge_live": "Costruito con agenti IA", "hero_eyebrow": "Richiesta di spedizione", "hero_title": "Valuta il rischio della tua spedizione in pochi secondi.", "hero_sub": "Inserisci qui sotto la rotta e i dettagli del carico. La richiesta passa a un flusso automatizzato che valuta la spedizione e mostra qui il risultato.", "section1_title": "Dettagli della spedizione", "badge_form": "modulo", "route_origin": "Origine", "route_destination": "Destinazione", "route_notset": "Non impostato", "route_mode": "modalità", "field_origin_city": "Città di origine", "field_origin_country": "Paese di origine", "field_dest_city": "Città di destinazione", "field_dest_country": "Paese di destinazione", "field_city_placeholder": "Inizia a digitare una città…", "field_country_placeholder": "Compilato in base alla città", "field_transport_mode": "Modalità di trasporto", "field_cargo_type": "Tipo di carico", "field_cargo_value": "Valore del carico", "field_departure_date": "Data di partenza", "opt_select_mode": "Seleziona una modalità", "opt_select_cargo": "Seleziona un tipo di carico", "mode_sea": "Marittimo", "mode_air": "Aereo", "mode_road": "Stradale", "mode_rail": "Ferroviario", "mode_multimodal": "Multimodale / Intermodale", "cargo_containerized": "Carico in container", "cargo_bulk_dry": "Rinfusa secca", "cargo_bulk_liquid": "Rinfusa liquida", "cargo_breakbulk": "Carico generale / convenzionale", "cargo_neobulk": "Carico neo-bulk", "cargo_roro": "RoRo (veicoli)", "cargo_oversized": "Fuori sagoma / carico pesante / progetto", "cargo_perishable": "Merce deperibile", "cargo_dangerous": "Merce pericolosa", "btn_submit": "Avvia valutazione", "btn_reset": "Reimposta", "section2_title": "Valutazione della spedizione", "status_idle": "inattivo", "status_submitting": "invio in corso", "status_awaiting_approval": "in attesa di approvazione", "status_approved": "approvato", "status_rejected": "respinto", "status_error": "errore", "vr_eyebrow": "Segnale di rischio in tempo reale", "vr_title": "Perché oggi ogni spedizione ha bisogno di un controllo del rischio", "vr_eta_label": "Finestra di arrivo prevista", "vr_eta_1": "18–22 giorni · condizioni normali", "vr_eta_2": "21–27 giorni · deviazione in corso", "vr_eta_3": "16–19 giorni · corsia libera", "vr_caption_1": "Conflitti e sanzioni possono deviare intere rotte marittime nel giro di una notte.", "vr_caption_2": "La congestione portuale e le vertenze sindacali si ripercuotono sui programmi globali.", "vr_caption_3": "Le tariffe di carburante e nolo oscillano con poco preavviso.", "vr_caption_4": "Le zone a rischio sicurezza e pirateria cambiano con la mappa politica.", "vr_caption_5": "Una singola interruzione, ovunque avvenga, può propagarsi lungo l'intera catena.", "vr_footline": "Fattori di rischio, in continuo cambiamento", "sf_pitch_title": "Conosci il rischio prima che il container lasci il piazzale.", "sf_pitch_body": "Una singola spedizione può portare settimane di esposizione: una rotta deviata, uno sciopero portuale, un'oscillazione valutaria. Questo motore trasforma segnali sparsi in un unico numero difendibile che il tuo team può usare in pochi secondi, non in fogli di calcolo. Se è un problema che vale la pena risolvere per la tua attività, parliamone.", "sf_meta": "Cargo Risk Engine — una demo funzionante, costruita end-to-end con sviluppo assistito dall'IA."}, "pt": {"badge_live": "Construído com agentes de IA", "hero_eyebrow": "Solicitação de embarque", "hero_title": "Avalie o risco do seu embarque em segundos.", "hero_sub": "Informe abaixo a rota e os detalhes da carga. A solicitação é enviada a um fluxo automatizado que pontua o embarque e mostra o resultado aqui.", "section1_title": "Detalhes do embarque", "badge_form": "formulário", "route_origin": "Origem", "route_destination": "Destino", "route_notset": "Não definido", "route_mode": "modo", "field_origin_city": "Cidade de origem", "field_origin_country": "País de origem", "field_dest_city": "Cidade de destino", "field_dest_country": "País de destino", "field_city_placeholder": "Comece a digitar uma cidade…", "field_country_placeholder": "Preenchido pela cidade", "field_transport_mode": "Modal de transporte", "field_cargo_type": "Tipo de carga", "field_cargo_value": "Valor da carga", "field_departure_date": "Data de partida", "opt_select_mode": "Selecione um modal", "opt_select_cargo": "Selecione um tipo de carga", "mode_sea": "Marítimo", "mode_air": "Aéreo", "mode_road": "Rodoviário", "mode_rail": "Ferroviário", "mode_multimodal": "Multimodal / Intermodal", "cargo_containerized": "Carga em contêiner", "cargo_bulk_dry": "Granel sólido", "cargo_bulk_liquid": "Granel líquido", "cargo_breakbulk": "Carga geral / fracionada", "cargo_neobulk": "Carga neo-granel", "cargo_roro": "RoRo (veículos)", "cargo_oversized": "Carga superdimensionada / pesada / projeto", "cargo_perishable": "Carga perecível", "cargo_dangerous": "Carga perigosa", "btn_submit": "Executar avaliação", "btn_reset": "Redefinir", "section2_title": "Avaliação do embarque", "status_idle": "ocioso", "status_submitting": "enviando", "status_awaiting_approval": "aguardando aprovação", "status_approved": "aprovado", "status_rejected": "rejeitado", "status_error": "erro", "vr_eyebrow": "Sinal de risco ao vivo", "vr_title": "Por que todo embarque precisa de uma checagem de risco hoje", "vr_eta_label": "Janela de chegada prevista", "vr_eta_1": "18–22 dias · condições normais", "vr_eta_2": "21–27 dias · rota alternativa em vigor", "vr_eta_3": "16–19 dias · via livre", "vr_caption_1": "Conflitos e sanções podem desviar rotas marítimas inteiras da noite para o dia.", "vr_caption_2": "Congestionamento portuário e greves afetam cronogramas globais.", "vr_caption_3": "As tarifas de combustível e frete variam com pouco aviso.", "vr_caption_4": "Zonas de risco de segurança e pirataria mudam com o mapa político.", "vr_caption_5": "Uma única interrupção, em qualquer ponto, pode afetar toda a cadeia.", "vr_footline": "Fatores de risco, sempre mudando", "sf_pitch_title": "Conheça o risco antes de o contêiner sair do pátio.", "sf_pitch_body": "Um único embarque pode carregar semanas de exposição — uma rota desviada, uma greve portuária, uma variação cambial. Este mecanismo transforma sinais dispersos em um único número defensável que sua equipe pode usar em segundos, não em planilhas. Se isso é um problema que vale a pena resolver, vamos conversar.", "sf_meta": "Cargo Risk Engine — uma demo funcional, construída de ponta a ponta com desenvolvimento assistido por IA."}, "nl": {"badge_live": "Gebouwd met AI-agents", "hero_eyebrow": "Zendingsaanvraag", "hero_title": "Beoordeel het risico van uw zending in enkele seconden.", "hero_sub": "Vul hieronder de route en ladinggegevens in. De aanvraag gaat naar een geautomatiseerde workflow die de zending beoordeelt en het resultaat hier toont.", "section1_title": "Zendingsgegevens", "badge_form": "formulier", "route_origin": "Herkomst", "route_destination": "Bestemming", "route_notset": "Niet ingesteld", "route_mode": "modus", "field_origin_city": "Herkomststad", "field_origin_country": "Land van herkomst", "field_dest_city": "Bestemmingsstad", "field_dest_country": "Land van bestemming", "field_city_placeholder": "Begin met typen…", "field_country_placeholder": "Wordt automatisch ingevuld", "field_transport_mode": "Transportmodus", "field_cargo_type": "Ladingtype", "field_cargo_value": "Waarde van de lading", "field_departure_date": "Vertrekdatum", "opt_select_mode": "Kies een modus", "opt_select_cargo": "Kies een ladingtype", "mode_sea": "Zee", "mode_air": "Lucht", "mode_road": "Weg", "mode_rail": "Spoor", "mode_multimodal": "Multimodaal / Intermodaal", "cargo_containerized": "Containerlading", "cargo_bulk_dry": "Droge bulk", "cargo_bulk_liquid": "Vloeibare bulk", "cargo_breakbulk": "Stukgoed / algemene lading", "cargo_neobulk": "Neo-bulklading", "cargo_roro": "RoRo (voertuigen)", "cargo_oversized": "Overmaats / zwaar transport / project", "cargo_perishable": "Bederfelijke lading", "cargo_dangerous": "Gevaarlijke goederen", "btn_submit": "Beoordeling starten", "btn_reset": "Reset", "section2_title": "Zendingsbeoordeling", "status_idle": "inactief", "status_submitting": "bezig met versturen", "status_awaiting_approval": "wacht op goedkeuring", "status_approved": "goedgekeurd", "status_rejected": "afgewezen", "status_error": "fout", "vr_eyebrow": "Live risicosignaal", "vr_title": "Waarom elke zending vandaag een risicocheck nodig heeft", "vr_eta_label": "Verwacht aankomstvenster", "vr_eta_1": "18–22 dagen · normale omstandigheden", "vr_eta_2": "21–27 dagen · omleiding actief", "vr_eta_3": "16–19 dagen · route vrij", "vr_caption_1": "Conflicten en sancties kunnen hele scheepvaartroutes van de ene op de andere dag omleiden.", "vr_caption_2": "Havencongestie en arbeidsconflicten verstoren wereldwijde schema's.", "vr_caption_3": "Brandstof- en vrachttarieven schommelen met weinig waarschuwing.", "vr_caption_4": "Veiligheids- en piraterijrisicozones verschuiven met de politieke kaart.", "vr_caption_5": "Eén verstoring, waar dan ook, kan door de hele keten trekken.", "vr_footline": "Risicofactoren, voortdurend in beweging", "sf_pitch_title": "Ken het risico voordat de container het terrein verlaat.", "sf_pitch_body": "Eén zending kan weken aan risico met zich meedragen — een omgeleide route, een havenstaking, een koersschommeling. Deze engine zet verspreide signalen om in één onderbouwd cijfer waar uw team binnen seconden mee kan werken, niet in spreadsheets. Als dat een probleem is dat het waard is om op te lossen, laten we praten.", "sf_meta": "Cargo Risk Engine — een werkende demo, end-to-end gebouwd met AI-ondersteunde ontwikkeling."}, "da": {"badge_live": "Bygget med AI-agenter", "hero_eyebrow": "Forsendelsesanmodning", "hero_title": "Vurder risikoen for din forsendelse på få sekunder.", "hero_sub": "Angiv rute og ladningsoplysninger nedenfor. Anmodningen sendes til en automatiseret arbejdsgang, der vurderer forsendelsen og viser resultatet her.", "section1_title": "Forsendelsesdetaljer", "badge_form": "formular", "route_origin": "Afsendelse", "route_destination": "Destination", "route_notset": "Ikke angivet", "route_mode": "transportform", "field_origin_city": "Afsendelsesby", "field_origin_country": "Afsendelsesland", "field_dest_city": "Destinationsby", "field_dest_country": "Destinationsland", "field_city_placeholder": "Begynd at skrive en by…", "field_country_placeholder": "Udfyldes automatisk fra by", "field_transport_mode": "Transportform", "field_cargo_type": "Ladningstype", "field_cargo_value": "Ladningsværdi", "field_departure_date": "Afgangsdato", "opt_select_mode": "Vælg en transportform", "opt_select_cargo": "Vælg en ladningstype", "mode_sea": "Sø", "mode_air": "Luft", "mode_road": "Vej", "mode_rail": "Bane", "mode_multimodal": "Multimodal / Intermodal", "cargo_containerized": "Containergods", "cargo_bulk_dry": "Tør bulk", "cargo_bulk_liquid": "Flydende bulk", "cargo_breakbulk": "Stykgods / almindelig last", "cargo_neobulk": "Neo-bulk-gods", "cargo_roro": "RoRo (køretøjer)", "cargo_oversized": "Overstørrelse / tunglast / projektgods", "cargo_perishable": "Letfordærvelig last", "cargo_dangerous": "Farligt gods", "btn_submit": "Start vurdering", "btn_reset": "Nulstil", "section2_title": "Forsendelsesvurdering", "status_idle": "inaktiv", "status_submitting": "sender", "status_awaiting_approval": "afventer godkendelse", "status_approved": "godkendt", "status_rejected": "afvist", "status_error": "fejl", "vr_eyebrow": "Live risikosignal", "vr_title": "Hvorfor enhver forsendelse i dag har brug for en risikovurdering", "vr_eta_label": "Forventet ankomstvindue", "vr_eta_1": "18–22 dage · normale forhold", "vr_eta_2": "21–27 dage · omlægning i gang", "vr_eta_3": "16–19 dage · rute ryddet", "vr_caption_1": "Konflikt og sanktioner kan omlægge hele skibsruter fra den ene dag til den anden.", "vr_caption_2": "Havnetrængsel og arbejdskonflikter påvirker globale tidsplaner.", "vr_caption_3": "Brændstof- og fragtrater svinger med kort varsel.", "vr_caption_4": "Sikkerheds- og piratrisikozoner flytter sig med det politiske kort.", "vr_caption_5": "Én forstyrrelse, uanset hvor, kan brede sig gennem hele kæden.", "vr_footline": "Risikofaktorer, i konstant forandring", "sf_pitch_title": "Kend risikoen, før containeren forlader pladsen.", "sf_pitch_body": "Én forsendelse kan bære ugers eksponering — en omlagt rute, en havnestrejke, et valutaudsving. Denne motor omdanner spredte signaler til ét klart tal, dit team kan handle på inden for få sekunder, ikke regneark. Hvis det er et problem, det er værd at løse for jeres virksomhed, så lad os tale sammen.", "sf_meta": "Cargo Risk Engine — en fungerende demo, bygget end-to-end med AI-understøttet udvikling."}, "ru": {"badge_live": "Создано с помощью ИИ-агентов", "hero_eyebrow": "Запрос на отправку", "hero_title": "Оцените риск вашей поставки за несколько секунд.", "hero_sub": "Укажите ниже маршрут и данные груза. Запрос передаётся в автоматизированный процесс, который оценивает поставку и показывает результат здесь.", "section1_title": "Детали поставки", "badge_form": "форма", "route_origin": "Отправление", "route_destination": "Назначение", "route_notset": "Не указано", "route_mode": "режим", "field_origin_city": "Город отправления", "field_origin_country": "Страна отправления", "field_dest_city": "Город назначения", "field_dest_country": "Страна назначения", "field_city_placeholder": "Начните вводить город…", "field_country_placeholder": "Заполняется по городу", "field_transport_mode": "Способ перевозки", "field_cargo_type": "Тип груза", "field_cargo_value": "Стоимость груза", "field_departure_date": "Дата отправления", "opt_select_mode": "Выберите способ перевозки", "opt_select_cargo": "Выберите тип груза", "mode_sea": "Морской", "mode_air": "Воздушный", "mode_road": "Автомобильный", "mode_rail": "Железнодорожный", "mode_multimodal": "Мультимодальный / Интермодальный", "cargo_containerized": "Контейнерный груз", "cargo_bulk_dry": "Сухой навалочный груз", "cargo_bulk_liquid": "Наливной груз", "cargo_breakbulk": "Генеральный груз", "cargo_neobulk": "Нео-навалочный груз", "cargo_roro": "RoRo (транспортные средства)", "cargo_oversized": "Негабаритный / тяжеловесный / проектный груз", "cargo_perishable": "Скоропортящийся груз", "cargo_dangerous": "Опасный груз", "btn_submit": "Запустить оценку", "btn_reset": "Сбросить", "section2_title": "Оценка поставки", "status_idle": "ожидание", "status_submitting": "отправка", "status_awaiting_approval": "ожидает одобрения", "status_approved": "одобрено", "status_rejected": "отклонено", "status_error": "ошибка", "vr_eyebrow": "Сигнал риска в реальном времени", "vr_title": "Почему сегодня каждой поставке нужна проверка риска", "vr_eta_label": "Ожидаемое окно прибытия", "vr_eta_1": "18–22 дня · обычные условия", "vr_eta_2": "21–27 дней · действует объезд", "vr_eta_3": "16–19 дней · маршрут свободен", "vr_caption_1": "Конфликты и санкции могут за одну ночь изменить целые морские маршруты.", "vr_caption_2": "Заторы в портах и трудовые споры сказываются на глобальных графиках.", "vr_caption_3": "Цены на топливо и фрахт могут резко меняться без предупреждения.", "vr_caption_4": "Зоны риска безопасности и пиратства смещаются вместе с политической картой.", "vr_caption_5": "Один сбой в любой точке может затронуть всю цепочку поставок.", "vr_footline": "Факторы риска, постоянно меняются", "sf_pitch_title": "Узнайте риск до того, как контейнер покинет площадку.", "sf_pitch_body": "Одна поставка может нести недели скрытого риска — изменённый маршрут, забастовка в порту, колебание валюты. Этот механизм превращает разрозненные сигналы в единое, обоснованное число, с которым ваша команда может работать за секунды, а не в таблицах. Если это проблема, которую стоит решить для вашего бизнеса, давайте обсудим.", "sf_meta": "Cargo Risk Engine — рабочая демонстрация, полностью созданная при помощи ИИ."}, "zh": {"badge_live": "由 AI 智能体构建", "hero_eyebrow": "货运申请", "hero_title": "几秒钟内评估您货运的风险。", "hero_sub": "请在下方填写路线和货物信息。请求将交由自动化工作流评分，结果会显示在此处。", "section1_title": "货运详情", "badge_form": "表单", "route_origin": "起运地", "route_destination": "目的地", "route_notset": "未设置", "route_mode": "方式", "field_origin_city": "起运城市", "field_origin_country": "起运国家", "field_dest_city": "目的地城市", "field_dest_country": "目的地国家", "field_city_placeholder": "输入城市名称…", "field_country_placeholder": "根据城市自动填写", "field_transport_mode": "运输方式", "field_cargo_type": "货物类型", "field_cargo_value": "货物价值", "field_departure_date": "出发日期", "opt_select_mode": "选择运输方式", "opt_select_cargo": "选择货物类型", "mode_sea": "海运", "mode_air": "空运", "mode_road": "公路", "mode_rail": "铁路", "mode_multimodal": "多式联运", "cargo_containerized": "集装箱货物", "cargo_bulk_dry": "干散货", "cargo_bulk_liquid": "液散货", "cargo_breakbulk": "散杂货", "cargo_neobulk": "新散货", "cargo_roro": "滚装货（车辆）", "cargo_oversized": "超大件／重型／项目货物", "cargo_perishable": "易腐货物", "cargo_dangerous": "危险品", "btn_submit": "开始评估", "btn_reset": "重置", "section2_title": "货运评估", "status_idle": "空闲", "status_submitting": "提交中", "status_awaiting_approval": "等待审批", "status_approved": "已批准", "status_rejected": "已拒绝", "status_error": "错误", "vr_eyebrow": "实时风险信号", "vr_title": "为什么如今每一票货运都需要风险检查", "vr_eta_label": "预计到达时间窗口", "vr_eta_1": "18–22 天 · 正常情况", "vr_eta_2": "21–27 天 · 正在改道", "vr_eta_3": "16–19 天 · 航线畅通", "vr_caption_1": "冲突和制裁可能在一夜之间改变整条航线。", "vr_caption_2": "港口拥堵和劳资纠纷会波及全球排期。", "vr_caption_3": "燃油和运费价格可能毫无预警地剧烈波动。", "vr_caption_4": "安全与海盗风险区域会随政治局势而变化。", "vr_caption_5": "任何一处中断都可能波及整条供应链。", "vr_footline": "风险因素，持续变化中", "sf_pitch_title": "在集装箱离场前，先了解风险。", "sf_pitch_body": "一票货运可能暗藏数周的风险敞口——改道的航线、港口罢工、汇率波动。这个引擎将分散的信号整合为一个可靠的数字，让您的团队在几秒钟内即可采取行动，而无需翻查表格。如果这正是您业务中值得解决的问题，欢迎联系我。", "sf_meta": "Cargo Risk Engine —— 一个端到端由 AI 辅助开发完成的可运行演示。"}, "ja": {"badge_live": "AIエージェントで構築", "hero_eyebrow": "貨物リクエスト", "hero_title": "数秒で貨物のリスクを評価します。", "hero_sub": "下記にルートと貨物の詳細を入力してください。リクエストは自動化されたワークフローに送られ、評価結果がここに表示されます。", "section1_title": "貨物詳細", "badge_form": "フォーム", "route_origin": "出発地", "route_destination": "目的地", "route_notset": "未設定", "route_mode": "モード", "field_origin_city": "出発都市", "field_origin_country": "出発国", "field_dest_city": "到着都市", "field_dest_country": "到着国", "field_city_placeholder": "都市名を入力…", "field_country_placeholder": "都市から自動入力", "field_transport_mode": "輸送モード", "field_cargo_type": "貨物種類", "field_cargo_value": "貨物価値", "field_departure_date": "出発日", "opt_select_mode": "輸送モードを選択", "opt_select_cargo": "貨物種類を選択", "mode_sea": "海上", "mode_air": "航空", "mode_road": "陸送", "mode_rail": "鉄道", "mode_multimodal": "複合一貫輸送", "cargo_containerized": "コンテナ貨物", "cargo_bulk_dry": "ドライバルク", "cargo_bulk_liquid": "液体バルク", "cargo_breakbulk": "在来貨物", "cargo_neobulk": "ネオバルク貨物", "cargo_roro": "RoRo（車両）", "cargo_oversized": "大型／重量物／プロジェクト貨物", "cargo_perishable": "生鮮貨物", "cargo_dangerous": "危険物", "btn_submit": "評価を実行", "btn_reset": "リセット", "section2_title": "貨物評価", "status_idle": "待機中", "status_submitting": "送信中", "status_awaiting_approval": "承認待ち", "status_approved": "承認済み", "status_rejected": "却下", "status_error": "エラー", "vr_eyebrow": "リアルタイムリスク信号", "vr_title": "なぜ今、すべての貨物にリスクチェックが必要なのか", "vr_eta_label": "到着予測期間", "vr_eta_1": "18～22日・通常条件", "vr_eta_2": "21～27日・迂回中", "vr_eta_3": "16～19日・航路良好", "vr_caption_1": "紛争や制裁により、航路全体が一晩で変更されることがあります。", "vr_caption_2": "港湾の混雑や労働争議は世界的なスケジュールに影響します。", "vr_caption_3": "燃料費や運賃はほとんど予告なく変動します。", "vr_caption_4": "治安・海賊リスク地域は政治情勢とともに変化します。", "vr_caption_5": "どこか一箇所の混乱がサプライチェーン全体に波及することがあります。", "vr_footline": "リスク要因は常に変化しています", "sf_pitch_title": "コンテナがヤードを出る前にリスクを把握する。", "sf_pitch_body": "一つの貨物輸送には、迂回ルート、港湾ストライキ、為替変動など、数週間分のリスクが潜んでいることがあります。このエンジンは、散在する信号を一つの信頼できる数値にまとめ、チームが表計算ソフトではなく数秒で行動できるようにします。これが御社にとって解決する価値のある課題であれば、ぜひご相談ください。", "sf_meta": "Cargo Risk Engine — AI支援開発によりエンドツーエンドで構築された稼働デモです。"}, "ko": {"badge_live": "AI 에이전트로 구축", "hero_eyebrow": "화물 요청", "hero_title": "몇 초 만에 화물 위험을 평가하세요.", "hero_sub": "아래에 경로와 화물 정보를 입력하세요. 요청은 자동화된 워크플로로 전달되어 화물을 평가하고 결과가 여기에 표시됩니다.", "section1_title": "화물 상세정보", "badge_form": "양식", "route_origin": "출발지", "route_destination": "목적지", "route_notset": "미설정", "route_mode": "운송 방식", "field_origin_city": "출발 도시", "field_origin_country": "출발 국가", "field_dest_city": "도착 도시", "field_dest_country": "도착 국가", "field_city_placeholder": "도시 이름을 입력하세요…", "field_country_placeholder": "도시에 따라 자동 입력", "field_transport_mode": "운송 방식", "field_cargo_type": "화물 종류", "field_cargo_value": "화물 가치", "field_departure_date": "출발일", "opt_select_mode": "운송 방식 선택", "opt_select_cargo": "화물 종류 선택", "mode_sea": "해상", "mode_air": "항공", "mode_road": "도로", "mode_rail": "철도", "mode_multimodal": "복합 운송", "cargo_containerized": "컨테이너 화물", "cargo_bulk_dry": "건화물 벌크", "cargo_bulk_liquid": "액체 벌크", "cargo_breakbulk": "일반 화물", "cargo_neobulk": "네오벌크 화물", "cargo_roro": "RoRo(차량)", "cargo_oversized": "대형/중량물/프로젝트 화물", "cargo_perishable": "신선/부패성 화물", "cargo_dangerous": "위험물", "btn_submit": "평가 실행", "btn_reset": "초기화", "section2_title": "화물 평가", "status_idle": "대기 중", "status_submitting": "제출 중", "status_awaiting_approval": "승인 대기 중", "status_approved": "승인됨", "status_rejected": "거부됨", "status_error": "오류", "vr_eyebrow": "실시간 위험 신호", "vr_title": "오늘날 모든 화물에 위험 점검이 필요한 이유", "vr_eta_label": "예상 도착 시간대", "vr_eta_1": "18–22일 · 정상 조건", "vr_eta_2": "21–27일 · 우회 중", "vr_eta_3": "16–19일 · 항로 원활", "vr_caption_1": "분쟁과 제재는 하룻밤 사이에 전체 해상 항로를 바꿀 수 있습니다.", "vr_caption_2": "항만 혼잡과 노동 분쟁은 전 세계 일정에 영향을 미칩니다.", "vr_caption_3": "연료 및 운임은 거의 예고 없이 변동합니다.", "vr_caption_4": "보안 및 해적 위험 지역은 정치 지형에 따라 이동합니다.", "vr_caption_5": "한 곳의 혼란이 전체 공급망으로 번질 수 있습니다.", "vr_footline": "위험 요인은 항상 변화합니다", "sf_pitch_title": "컨테이너가 야드를 떠나기 전에 위험을 파악하세요.", "sf_pitch_body": "단 한 번의 화물 운송에도 우회 항로, 항만 파업, 환율 변동 등 수주간의 위험이 숨어 있을 수 있습니다. 이 엔진은 흩어진 신호를 하나의 신뢰할 수 있는 수치로 변환하여 팀이 스프레드시트가 아닌 몇 초 만에 대응할 수 있게 합니다. 귀사에서 해결할 가치가 있는 문제라면 이야기 나눠보시죠.", "sf_meta": "Cargo Risk Engine — AI 지원 개발로 처음부터 끝까지 구축된 실동 데모입니다."}, "ar": {"badge_live": "مبني باستخدام وكلاء الذكاء الاصطناعي", "hero_eyebrow": "طلب شحنة", "hero_title": "قيّم مخاطر شحنتك في ثوانٍ.", "hero_sub": "أدخل تفاصيل المسار والبضاعة أدناه. يتم إرسال الطلب إلى سير عمل آلي يقوم بتقييم الشحنة ويعرض النتيجة هنا.", "section1_title": "تفاصيل الشحنة", "badge_form": "نموذج", "route_origin": "المنشأ", "route_destination": "الوجهة", "route_notset": "غير محدد", "route_mode": "الوسيلة", "field_origin_city": "مدينة المنشأ", "field_origin_country": "دولة المنشأ", "field_dest_city": "مدينة الوجهة", "field_dest_country": "دولة الوجهة", "field_city_placeholder": "ابدأ بكتابة اسم مدينة…", "field_country_placeholder": "يُملأ تلقائيًا حسب المدينة", "field_transport_mode": "وسيلة النقل", "field_cargo_type": "نوع البضاعة", "field_cargo_value": "قيمة البضاعة", "field_departure_date": "تاريخ المغادرة", "opt_select_mode": "اختر وسيلة النقل", "opt_select_cargo": "اختر نوع البضاعة", "mode_sea": "بحري", "mode_air": "جوي", "mode_road": "بري", "mode_rail": "سكك حديدية", "mode_multimodal": "متعدد الوسائط", "cargo_containerized": "بضائع بالحاويات", "cargo_bulk_dry": "سائبة جافة", "cargo_bulk_liquid": "سائبة سائلة", "cargo_breakbulk": "بضائع عامة", "cargo_neobulk": "بضائع شبه سائبة", "cargo_roro": "روروا (مركبات)", "cargo_oversized": "بضائع كبيرة الحجم / ثقيلة / مشاريع", "cargo_perishable": "بضائع قابلة للتلف", "cargo_dangerous": "بضائع خطرة", "btn_submit": "تشغيل التقييم", "btn_reset": "إعادة تعيين", "section2_title": "تقييم الشحنة", "status_idle": "خامل", "status_submitting": "جارٍ الإرسال", "status_awaiting_approval": "بانتظار الموافقة", "status_approved": "تمت الموافقة", "status_rejected": "مرفوض", "status_error": "خطأ", "vr_eyebrow": "إشارة مخاطر مباشرة", "vr_title": "لماذا تحتاج كل شحنة اليوم إلى فحص للمخاطر", "vr_eta_label": "نافذة الوصول المتوقعة", "vr_eta_1": "18–22 يومًا · ظروف عادية", "vr_eta_2": "21–27 يومًا · تحويل مسار قائم", "vr_eta_3": "16–19 يومًا · المسار مفتوح", "vr_caption_1": "يمكن للنزاعات والعقوبات أن تغيّر مسارات شحن بحرية كاملة بين ليلة وضحاها.", "vr_caption_2": "ازدحام الموانئ والنزاعات العمالية تؤثر على الجداول الزمنية العالمية.", "vr_caption_3": "أسعار الوقود والشحن تتقلب دون سابق إنذار تقريبًا.", "vr_caption_4": "مناطق مخاطر الأمن والقرصنة تتغير مع الخريطة السياسية.", "vr_caption_5": "يمكن لاضطراب واحد في أي مكان أن يمتد عبر سلسلة التوريد بأكملها.", "vr_footline": "عوامل المخاطر، في تغيّر مستمر", "sf_pitch_title": "اعرف المخاطر قبل أن تغادر الحاوية الساحة.", "sf_pitch_body": "يمكن أن تحمل شحنة واحدة أسابيع من التعرض للمخاطر — مسار محوَّل، إضراب في ميناء، تقلب في العملة. يحوّل هذا المحرك الإشارات المتفرقة إلى رقم واحد موثوق يمكن لفريقك التصرف بناءً عليه في ثوانٍ، لا في جداول بيانات. إذا كانت هذه مشكلة تستحق الحل لعملك، فلنتحدث.", "sf_meta": "Cargo Risk Engine — عرض توضيحي فعّال، مبني بالكامل بمساعدة الذكاء الاصطناعي."}, "ur": {"badge_live": "AI ایجنٹس کی مدد سے تیار کردہ", "hero_eyebrow": "شپمنٹ کی درخواست", "hero_title": "اپنی شپمنٹ کے خطرے کا اندازہ سیکنڈوں میں لگائیں۔", "hero_sub": "نیچے روٹ اور کارگو کی تفصیلات درج کریں۔ درخواست ایک خودکار ورک فلو کو بھیجی جاتی ہے جو شپمنٹ کا اسکور طے کرتا ہے اور نتیجہ یہاں دکھاتا ہے۔", "section1_title": "شپمنٹ کی تفصیلات", "badge_form": "فارم", "route_origin": "ابتدائی مقام", "route_destination": "منزل", "route_notset": "طے نہیں", "route_mode": "طریقہ", "field_origin_city": "ابتدائی شہر", "field_origin_country": "ابتدائی ملک", "field_dest_city": "منزل کا شہر", "field_dest_country": "منزل کا ملک", "field_city_placeholder": "شہر کا نام لکھنا شروع کریں…", "field_country_placeholder": "شہر سے خودکار بھرا جائے گا", "field_transport_mode": "ٹرانسپورٹ کا طریقہ", "field_cargo_type": "کارگو کی قسم", "field_cargo_value": "کارگو کی مالیت", "field_departure_date": "روانگی کی تاریخ", "opt_select_mode": "طریقہ منتخب کریں", "opt_select_cargo": "کارگو کی قسم منتخب کریں", "mode_sea": "سمندری", "mode_air": "ہوائی", "mode_road": "سڑک", "mode_rail": "ریل", "mode_multimodal": "ملٹی موڈل / انٹرموڈل", "cargo_containerized": "کنٹینر کارگو", "cargo_bulk_dry": "خشک بلک", "cargo_bulk_liquid": "مائع بلک", "cargo_breakbulk": "عمومی کارگو", "cargo_neobulk": "نیو بلک کارگو", "cargo_roro": "روروا (گاڑیاں)", "cargo_oversized": "بڑے حجم / بھاری / پراجیکٹ کارگو", "cargo_perishable": "جلد خراب ہونے والا کارگو", "cargo_dangerous": "خطرناک اشیاء", "btn_submit": "جائزہ شروع کریں", "btn_reset": "دوبارہ ترتیب دیں", "section2_title": "شپمنٹ کا جائزہ", "status_idle": "غیر فعال", "status_submitting": "بھیجا جا رہا ہے", "status_awaiting_approval": "منظوری کا منتظر", "status_approved": "منظور شدہ", "status_rejected": "مسترد", "status_error": "خرابی", "vr_eyebrow": "لائیو رسک سگنل", "vr_title": "آج ہر شپمنٹ کو رسک چیک کی ضرورت کیوں ہے", "vr_eta_label": "متوقع آمد کا وقفہ", "vr_eta_1": "18–22 دن · معمول کے حالات", "vr_eta_2": "21–27 دن · متبادل راستہ جاری", "vr_eta_3": "16–19 دن · راستہ صاف", "vr_caption_1": "تنازعات اور پابندیاں راتوں رات پوری شپنگ لائنز کا رخ بدل سکتی ہیں۔", "vr_caption_2": "بندرگاہوں کی بھیڑ اور مزدور تنازعات عالمی شیڈولز کو متاثر کرتے ہیں۔", "vr_caption_3": "ایندھن اور مال برداری کی شرحیں بغیر کسی وارننگ کے بدل سکتی ہیں۔", "vr_caption_4": "سیکیورٹی اور قزاقی کے خطرناک علاقے سیاسی نقشے کے ساتھ بدلتے ہیں۔", "vr_caption_5": "کہیں بھی ایک رکاوٹ پوری سپلائی چین میں پھیل سکتی ہے۔", "vr_footline": "خطرے کے عوامل، مسلسل بدلتے ہوئے", "sf_pitch_title": "کنٹینر یارڈ سے نکلنے سے پہلے خطرے کو جانیں۔", "sf_pitch_body": "ایک شپمنٹ ہفتوں کے خطرے کو ساتھ لے کر چل سکتی ہے — بدلا ہوا راستہ، بندرگاہ کی ہڑتال، کرنسی میں اتار چڑھاؤ۔ یہ انجن بکھرے ہوئے سگنلز کو ایک قابلِ اعتماد نمبر میں بدل دیتا ہے جس پر آپ کی ٹیم سیکنڈوں میں عمل کر سکتی ہے، اسپریڈشیٹس میں نہیں۔ اگر یہ آپ کے کاروبار کے لیے حل کرنے کے قابل مسئلہ ہے تو آئیے بات کرتے ہیں۔", "sf_meta": "Cargo Risk Engine — ایک فعال ڈیمو، مکمل طور پر AI کی مدد سے تیار کیا گیا۔"}, "hi": {"badge_live": "AI एजेंट्स से बनाया गया", "hero_eyebrow": "शिपमेंट अनुरोध", "hero_title": "अपने शिपमेंट का जोखिम कुछ सेकंड में जाँचें।", "hero_sub": "नीचे मार्ग और कार्गो का विवरण भरें। अनुरोध एक स्वचालित वर्कफ़्लो को भेजा जाता है जो शिपमेंट का स्कोर तय करता है और परिणाम यहाँ दिखाता है।", "section1_title": "शिपमेंट विवरण", "badge_form": "फ़ॉर्म", "route_origin": "मूल स्थान", "route_destination": "गंतव्य", "route_notset": "निर्धारित नहीं", "route_mode": "माध्यम", "field_origin_city": "मूल शहर", "field_origin_country": "मूल देश", "field_dest_city": "गंतव्य शहर", "field_dest_country": "गंतव्य देश", "field_city_placeholder": "शहर का नाम टाइप करें…", "field_country_placeholder": "शहर से स्वतः भरा जाएगा", "field_transport_mode": "परिवहन माध्यम", "field_cargo_type": "कार्गो प्रकार", "field_cargo_value": "कार्गो मूल्य", "field_departure_date": "प्रस्थान तिथि", "opt_select_mode": "माध्यम चुनें", "opt_select_cargo": "कार्गो प्रकार चुनें", "mode_sea": "समुद्री", "mode_air": "हवाई", "mode_road": "सड़क", "mode_rail": "रेल", "mode_multimodal": "मल्टीमोडल / इंटरमोडल", "cargo_containerized": "कंटेनर कार्गो", "cargo_bulk_dry": "शुष्क थोक माल", "cargo_bulk_liquid": "तरल थोक माल", "cargo_breakbulk": "सामान्य कार्गो", "cargo_neobulk": "नियो-बल्क कार्गो", "cargo_roro": "रो-रो (वाहन)", "cargo_oversized": "अत्यधिक आकार / भारी / प्रोजेक्ट कार्गो", "cargo_perishable": "शीघ्र नष्ट होने वाला कार्गो", "cargo_dangerous": "खतरनाक सामान", "btn_submit": "आकलन शुरू करें", "btn_reset": "रीसेट करें", "section2_title": "शिपमेंट आकलन", "status_idle": "निष्क्रिय", "status_submitting": "भेजा जा रहा है", "status_awaiting_approval": "स्वीकृति की प्रतीक्षा में", "status_approved": "स्वीकृत", "status_rejected": "अस्वीकृत", "status_error": "त्रुटि", "vr_eyebrow": "लाइव जोखिम संकेत", "vr_title": "आज हर शिपमेंट को जोखिम जाँच की आवश्यकता क्यों है", "vr_eta_label": "अनुमानित आगमन विंडो", "vr_eta_1": "18–22 दिन · सामान्य स्थिति", "vr_eta_2": "21–27 दिन · मार्ग परिवर्तन जारी", "vr_eta_3": "16–19 दिन · मार्ग स्पष्ट", "vr_caption_1": "संघर्ष और प्रतिबंध रातोंरात पूरे शिपिंग मार्गों को बदल सकते हैं।", "vr_caption_2": "बंदरगाह भीड़भाड़ और श्रम विवाद वैश्विक समय-सारिणी को प्रभावित करते हैं।", "vr_caption_3": "ईंधन और भाड़े की दरें बिना किसी चेतावनी के बदल सकती हैं।", "vr_caption_4": "सुरक्षा और समुद्री डकैती के जोखिम क्षेत्र राजनीतिक मानचित्र के साथ बदलते हैं।", "vr_caption_5": "कहीं भी एक व्यवधान पूरी आपूर्ति शृंखला में फैल सकता है।", "vr_footline": "जोखिम कारक, लगातार बदलते हुए", "sf_pitch_title": "कंटेनर यार्ड से निकलने से पहले जोखिम जान लें।", "sf_pitch_body": "एक शिपमेंट हफ्तों के जोखिम को साथ ले जा सकता है — बदला हुआ मार्ग, बंदरगाह हड़ताल, मुद्रा में उतार-चढ़ाव। यह इंजन बिखरे संकेतों को एक भरोसेमंद संख्या में बदल देता है जिस पर आपकी टीम सेकंडों में कार्रवाई कर सकती है, स्प्रेडशीट में नहीं। अगर यह आपके कारोबार के लिए हल करने लायक समस्या है, तो चलिए बात करते हैं।", "sf_meta": "Cargo Risk Engine — एक कार्यशील डेमो, पूरी तरह AI की मदद से बनाया गया।"}, "id": {"badge_live": "Dibangun dengan agen AI", "hero_eyebrow": "Permintaan pengiriman", "hero_title": "Nilai risiko pengiriman Anda dalam hitungan detik.", "hero_sub": "Masukkan rute dan detail kargo di bawah ini. Permintaan diteruskan ke alur kerja otomatis yang menilai pengiriman dan menampilkan hasilnya di sini.", "section1_title": "Detail pengiriman", "badge_form": "formulir", "route_origin": "Asal", "route_destination": "Tujuan", "route_notset": "Belum ditetapkan", "route_mode": "moda", "field_origin_city": "Kota asal", "field_origin_country": "Negara asal", "field_dest_city": "Kota tujuan", "field_dest_country": "Negara tujuan", "field_city_placeholder": "Mulai ketik nama kota…", "field_country_placeholder": "Terisi otomatis dari kota", "field_transport_mode": "Moda transportasi", "field_cargo_type": "Jenis kargo", "field_cargo_value": "Nilai kargo", "field_departure_date": "Tanggal keberangkatan", "opt_select_mode": "Pilih moda", "opt_select_cargo": "Pilih jenis kargo", "mode_sea": "Laut", "mode_air": "Udara", "mode_road": "Darat", "mode_rail": "Kereta", "mode_multimodal": "Multimoda / Intermoda", "cargo_containerized": "Kargo peti kemas", "cargo_bulk_dry": "Curah kering", "cargo_bulk_liquid": "Curah cair", "cargo_breakbulk": "Kargo umum", "cargo_neobulk": "Kargo neo-curah", "cargo_roro": "RoRo (kendaraan)", "cargo_oversized": "Kargo besar / berat / proyek", "cargo_perishable": "Kargo mudah rusak", "cargo_dangerous": "Barang berbahaya", "btn_submit": "Jalankan penilaian", "btn_reset": "Atur ulang", "section2_title": "Penilaian pengiriman", "status_idle": "menunggu", "status_submitting": "mengirim", "status_awaiting_approval": "menunggu persetujuan", "status_approved": "disetujui", "status_rejected": "ditolak", "status_error": "kesalahan", "vr_eyebrow": "Sinyal risiko langsung", "vr_title": "Mengapa setiap pengiriman kini butuh pemeriksaan risiko", "vr_eta_label": "Perkiraan jendela kedatangan", "vr_eta_1": "18–22 hari · kondisi normal", "vr_eta_2": "21–27 hari · sedang dialihkan", "vr_eta_3": "16–19 hari · jalur lancar", "vr_caption_1": "Konflik dan sanksi dapat mengalihkan seluruh jalur pelayaran dalam semalam.", "vr_caption_2": "Kemacetan pelabuhan dan perselisihan tenaga kerja mengganggu jadwal global.", "vr_caption_3": "Tarif bahan bakar dan angkutan bisa berubah tanpa banyak peringatan.", "vr_caption_4": "Zona risiko keamanan dan pembajakan bergeser mengikuti peta politik.", "vr_caption_5": "Satu gangguan di mana pun dapat merambat ke seluruh rantai pasok.", "vr_footline": "Faktor risiko, terus berubah", "sf_pitch_title": "Ketahui risikonya sebelum peti kemas meninggalkan halaman.", "sf_pitch_body": "Satu pengiriman bisa membawa risiko berminggu-minggu — rute yang dialihkan, mogok pelabuhan, fluktuasi mata uang. Mesin ini mengubah sinyal yang tersebar menjadi satu angka yang jelas dan dapat dipertanggungjawabkan, yang bisa langsung digunakan tim Anda dalam hitungan detik, bukan lewat spreadsheet. Jika ini masalah yang layak diselesaikan untuk bisnis Anda, mari kita bicarakan.", "sf_meta": "Cargo Risk Engine — demo yang berfungsi penuh, dibangun end-to-end dengan bantuan AI."}, "tr": {"badge_live": "Yapay zekâ ajanlarıyla geliştirildi", "hero_eyebrow": "Sevkiyat talebi", "hero_title": "Sevkiyatınızın riskini saniyeler içinde değerlendirin.", "hero_sub": "Aşağıya güzergâh ve yük bilgilerini girin. Talep, sevkiyatı puanlayan otomatik bir iş akışına iletilir ve sonuç burada gösterilir.", "section1_title": "Sevkiyat detayları", "badge_form": "form", "route_origin": "Çıkış", "route_destination": "Varış", "route_notset": "Belirlenmedi", "route_mode": "mod", "field_origin_city": "Çıkış şehri", "field_origin_country": "Çıkış ülkesi", "field_dest_city": "Varış şehri", "field_dest_country": "Varış ülkesi", "field_city_placeholder": "Bir şehir yazmaya başlayın…", "field_country_placeholder": "Şehre göre otomatik doldurulur", "field_transport_mode": "Taşıma modu", "field_cargo_type": "Yük türü", "field_cargo_value": "Yük değeri", "field_departure_date": "Çıkış tarihi", "opt_select_mode": "Bir mod seçin", "opt_select_cargo": "Bir yük türü seçin", "mode_sea": "Deniz", "mode_air": "Hava", "mode_road": "Kara", "mode_rail": "Demiryolu", "mode_multimodal": "Multimodal / Intermodal", "cargo_containerized": "Konteyner yükü", "cargo_bulk_dry": "Kuru dökme yük", "cargo_bulk_liquid": "Sıvı dökme yük", "cargo_breakbulk": "Parça yük / genel kargo", "cargo_neobulk": "Neo-bulk yük", "cargo_roro": "RoRo (araçlar)", "cargo_oversized": "Aşırı boyutlu / ağır yük / proje kargosu", "cargo_perishable": "Bozulabilir yük", "cargo_dangerous": "Tehlikeli madde", "btn_submit": "Değerlendirmeyi başlat", "btn_reset": "Sıfırla", "section2_title": "Sevkiyat değerlendirmesi", "status_idle": "boşta", "status_submitting": "gönderiliyor", "status_awaiting_approval": "onay bekliyor", "status_approved": "onaylandı", "status_rejected": "reddedildi", "status_error": "hata", "vr_eyebrow": "Canlı risk sinyali", "vr_title": "Bugün her sevkiyatın neden bir risk kontrolüne ihtiyacı var", "vr_eta_label": "Tahmini varış aralığı", "vr_eta_1": "18–22 gün · normal koşullar", "vr_eta_2": "21–27 gün · alternatif güzergâh geçerli", "vr_eta_3": "16–19 gün · güzergâh açık", "vr_caption_1": "Çatışma ve yaptırımlar bütün deniz yollarını bir gecede değiştirebilir.", "vr_caption_2": "Liman tıkanıklığı ve iş uyuşmazlıkları küresel programları etkiler.", "vr_caption_3": "Yakıt ve navlun fiyatları çoğu zaman uyarı vermeden dalgalanır.", "vr_caption_4": "Güvenlik ve korsanlık riski bölgeleri siyasi haritayla birlikte değişir.", "vr_caption_5": "Herhangi bir yerdeki tek bir aksaklık tüm tedarik zincirine yayılabilir.", "vr_footline": "Risk faktörleri sürekli değişiyor", "sf_pitch_title": "Konteyner sahadan çıkmadan önce riski bilin.", "sf_pitch_body": "Tek bir sevkiyat haftalarca sürecek bir riski taşıyabilir — değişen bir güzergâh, bir liman grevi, bir kur dalgalanması. Bu motor, dağınık sinyalleri ekibinizin tablolar yerine saniyeler içinde harekete geçebileceği tek, güvenilir bir sayıya dönüştürür. Bu, işletmeniz için çözülmeye değer bir sorunsa, konuşalım.", "sf_meta": "Cargo Risk Engine — uçtan uca yapay zekâ destekli geliştirmeyle oluşturulmuş çalışan bir demo."}, "vi": {"badge_live": "Xây dựng bằng tác nhân AI", "hero_eyebrow": "Yêu cầu vận chuyển", "hero_title": "Đánh giá rủi ro lô hàng của bạn chỉ trong vài giây.", "hero_sub": "Nhập tuyến đường và thông tin hàng hóa bên dưới. Yêu cầu sẽ được chuyển đến quy trình tự động để chấm điểm lô hàng và hiển thị kết quả tại đây.", "section1_title": "Chi tiết lô hàng", "badge_form": "biểu mẫu", "route_origin": "Điểm đi", "route_destination": "Điểm đến", "route_notset": "Chưa thiết lập", "route_mode": "phương thức", "field_origin_city": "Thành phố khởi hành", "field_origin_country": "Quốc gia khởi hành", "field_dest_city": "Thành phố đến", "field_dest_country": "Quốc gia đến", "field_city_placeholder": "Bắt đầu nhập tên thành phố…", "field_country_placeholder": "Tự động điền theo thành phố", "field_transport_mode": "Phương thức vận chuyển", "field_cargo_type": "Loại hàng hóa", "field_cargo_value": "Giá trị hàng hóa", "field_departure_date": "Ngày khởi hành", "opt_select_mode": "Chọn phương thức", "opt_select_cargo": "Chọn loại hàng hóa", "mode_sea": "Đường biển", "mode_air": "Đường hàng không", "mode_road": "Đường bộ", "mode_rail": "Đường sắt", "mode_multimodal": "Đa phương thức", "cargo_containerized": "Hàng container", "cargo_bulk_dry": "Hàng rời khô", "cargo_bulk_liquid": "Hàng rời lỏng", "cargo_breakbulk": "Hàng bách hóa", "cargo_neobulk": "Hàng bán rời", "cargo_roro": "RoRo (phương tiện)", "cargo_oversized": "Hàng quá khổ / siêu trường siêu trọng / dự án", "cargo_perishable": "Hàng dễ hư hỏng", "cargo_dangerous": "Hàng nguy hiểm", "btn_submit": "Chạy đánh giá", "btn_reset": "Đặt lại", "section2_title": "Đánh giá lô hàng", "status_idle": "chưa hoạt động", "status_submitting": "đang gửi", "status_awaiting_approval": "chờ phê duyệt", "status_approved": "đã duyệt", "status_rejected": "đã từ chối", "status_error": "lỗi", "vr_eyebrow": "Tín hiệu rủi ro trực tiếp", "vr_title": "Vì sao mọi lô hàng ngày nay đều cần kiểm tra rủi ro", "vr_eta_label": "Khung thời gian đến dự kiến", "vr_eta_1": "18–22 ngày · điều kiện bình thường", "vr_eta_2": "21–27 ngày · đang chuyển hướng", "vr_eta_3": "16–19 ngày · tuyến thông thoáng", "vr_caption_1": "Xung đột và lệnh trừng phạt có thể thay đổi toàn bộ tuyến hàng hải chỉ sau một đêm.", "vr_caption_2": "Tắc nghẽn cảng và tranh chấp lao động ảnh hưởng đến lịch trình toàn cầu.", "vr_caption_3": "Giá nhiên liệu và cước vận chuyển có thể biến động gần như không báo trước.", "vr_caption_4": "Các khu vực rủi ro an ninh và cướp biển thay đổi theo tình hình chính trị.", "vr_caption_5": "Một sự gián đoạn ở bất kỳ đâu cũng có thể lan ra toàn bộ chuỗi cung ứng.", "vr_footline": "Các yếu tố rủi ro luôn thay đổi", "sf_pitch_title": "Biết trước rủi ro trước khi container rời bãi.", "sf_pitch_body": "Một lô hàng có thể mang theo nhiều tuần rủi ro tiềm ẩn — một tuyến đường bị đổi hướng, một cuộc đình công tại cảng, một biến động tỷ giá. Công cụ này biến các tín hiệu rời rạc thành một con số duy nhất, đáng tin cậy mà đội của bạn có thể hành động trong vài giây, thay vì phải dò bảng tính. Nếu đây là vấn đề đáng để giải quyết cho doanh nghiệp của bạn, hãy trao đổi thêm.", "sf_meta": "Cargo Risk Engine — một bản demo hoạt động, được xây dựng toàn diện với sự hỗ trợ của AI."}};
+
+const I18N_LANGUAGES = [{"code": "en", "name": "English", "rtl": false}, {"code": "zh", "name": "中文", "rtl": false}, {"code": "hi", "name": "हिन्दी", "rtl": false}, {"code": "es", "name": "Español", "rtl": false}, {"code": "fr", "name": "Français", "rtl": false}, {"code": "ar", "name": "العربية", "rtl": true}, {"code": "pt", "name": "Português", "rtl": false}, {"code": "ru", "name": "Русский", "rtl": false}, {"code": "ur", "name": "اردو", "rtl": true}, {"code": "id", "name": "Bahasa Indonesia", "rtl": false}, {"code": "de", "name": "Deutsch", "rtl": false}, {"code": "ja", "name": "日本語", "rtl": false}, {"code": "tr", "name": "Türkçe", "rtl": false}, {"code": "vi", "name": "Tiếng Việt", "rtl": false}, {"code": "ko", "name": "한국어", "rtl": false}, {"code": "it", "name": "Italiano", "rtl": false}, {"code": "nl", "name": "Nederlands", "rtl": false}, {"code": "da", "name": "Dansk", "rtl": false}];
+
+
+const LANG_KEY = "cargoRiskEngine_lang";
+
+function t(key){
+  const lang = document.documentElement.getAttribute("data-lang") || "en";
+  const dict = I18N_TRANSLATIONS[lang] || I18N_TRANSLATIONS.en;
+  return dict[key] || I18N_TRANSLATIONS.en[key] || key;
+}
+
+function applyLanguage(code){
+  const lang = I18N_TRANSLATIONS[code] ? code : "en";
+  const meta = I18N_LANGUAGES.find(function(l){ return l.code === lang; }) || I18N_LANGUAGES[0];
+
+  document.documentElement.setAttribute("data-lang", lang);
+  document.documentElement.setAttribute("lang", lang);
+  document.documentElement.setAttribute("dir", meta.rtl ? "rtl" : "ltr");
+
+  document.querySelectorAll("[data-i18n]").forEach(function(el){
+    const key = el.getAttribute("data-i18n");
+    el.textContent = t(key);
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(function(el){
+    const key = el.getAttribute("data-i18n-placeholder");
+    el.setAttribute("placeholder", t(key));
+  });
+
+  const langToggleLabel = document.getElementById("langToggleLabel");
+  if(langToggleLabel){ langToggleLabel.textContent = lang.toUpperCase(); }
+
+  document.querySelectorAll(".lang-option").forEach(function(el){
+    el.classList.toggle("active", el.dataset.code === lang);
+  });
+
+  if(typeof updateRouteStrip === "function"){ updateRouteStrip(); }
+  if(typeof reapplyStatusBadge === "function"){ reapplyStatusBadge(); }
+}
+
+function populateLangMenu(){
+  const menu = document.getElementById("langMenu");
+  if(!menu) return;
+  let html = "";
+  I18N_LANGUAGES.forEach(function(l){
+    html += '<div class="lang-option" data-code="' + l.code + '" role="option">' +
+            '<span>' + l.name + '</span><span class="lo-code">' + l.code.toUpperCase() + '</span>' +
+            '</div>';
+  });
+  menu.innerHTML = html;
+
+  menu.querySelectorAll(".lang-option").forEach(function(el){
+    el.addEventListener("click", function(){
+      const code = el.dataset.code;
+      applyLanguage(code);
+      localStorage.setItem(LANG_KEY, code);
+      menu.classList.add("hidden");
+      langToggleBtn.setAttribute("aria-expanded", "false");
+    });
+  });
+}
+
+const langToggleBtn = document.getElementById("langToggle");
+const langMenuEl = document.getElementById("langMenu");
+if(langToggleBtn && langMenuEl){
+  populateLangMenu();
+  langToggleBtn.addEventListener("click", function(e){
+    e.stopPropagation();
+    const isOpen = !langMenuEl.classList.contains("hidden");
+    langMenuEl.classList.toggle("hidden", isOpen);
+    langToggleBtn.setAttribute("aria-expanded", String(!isOpen));
+  });
+  document.addEventListener("click", function(e){
+    if(!langMenuEl.contains(e.target) && e.target !== langToggleBtn){
+      langMenuEl.classList.add("hidden");
+      langToggleBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+}
+
+const savedLang = localStorage.getItem(LANG_KEY);
+applyLanguage(savedLang || (navigator.language || "en").slice(0,2));
+
+
+/* ============================================================
+   THEME TOGGLE — auto-cycling
+   The page swaps between light and dark on its own every few
+   seconds (smooth fade, not a hard flash — see the transition
+   rules near the top of the CSS). Clicking the toggle by hand
+   takes manual control and stops the auto-cycle, and that manual
+   choice is remembered via localStorage on the next visit.
+   ============================================================ */
+
+const THEME_KEY = "cargoRiskEngine_theme";
+const THEME_CYCLE_MS = 6000;
+let themeAutoCycleTimer = null;
+
+function applyTheme(theme){
+  if(theme === "dark"){
+    document.documentElement.setAttribute("data-theme", "dark");
+  }else{
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
+
+function startAutoThemeCycle(){
+  stopAutoThemeCycle();
+  themeAutoCycleTimer = setInterval(() => {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    applyTheme(isDark ? "light" : "dark");
+  }, THEME_CYCLE_MS);
+}
+
+function stopAutoThemeCycle(){
+  if(themeAutoCycleTimer){
+    clearInterval(themeAutoCycleTimer);
+    themeAutoCycleTimer = null;
+  }
+}
+
+const savedTheme = localStorage.getItem(THEME_KEY);
+const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+if(savedTheme === "dark" || savedTheme === "light"){
+  // person already made a manual choice on a previous visit — respect it, no auto-cycle
+  applyTheme(savedTheme);
+}else if(prefersReducedMotion){
+  // respect reduced-motion preference — pick light and stay put, no auto-cycle
+  applyTheme("light");
+}else{
+  // no manual preference yet — auto-cycle to show both themes
+  applyTheme("light");
+  startAutoThemeCycle();
+}
+
+const themeToggleBtn = document.getElementById("themeToggle");
+if(themeToggleBtn){
+  themeToggleBtn.addEventListener("click", () => {
+    stopAutoThemeCycle();
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const next = isDark ? "light" : "dark";
+    applyTheme(next);
+    localStorage.setItem(THEME_KEY, next);
+  });
+}
+
+
+
+/* ============================================================
+   INITIAL STATE
+   ============================================================ */
+
+setBadge("idle");
+
+updateRouteStrip();
+
+const copyYearEl = document.getElementById("copyYear");
+if(copyYearEl){ copyYearEl.textContent = new Date().getFullYear(); }
+
+</script>
+</body>
+</html>
